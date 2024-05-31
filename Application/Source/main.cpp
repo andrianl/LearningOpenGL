@@ -1,6 +1,35 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <Platform.h>
+#include "Shaders.h"
+
+
+std::string VS =
+"#version 330 core\n"
+"layout(location = 0) in vec3 position;\n"
+"out vec2 TexCoord;\n"
+"void main()\n"
+"{\n"
+"    TexCoord = position.xy * 0.5 + 0.5;\n"
+"    gl_Position = vec4(position, 1.0);\n"
+"}\n";
+
+std::string PS =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec2 TexCoord;\n"
+"void main()\n"
+"{\n"
+"    vec3 rainbow = mix(vec3(1.0, 0.0, 0.0), vec3(1.0, 0.5, 0.0), smoothstep(0.0, 0.16, TexCoord.y));\n"
+"    rainbow = mix(rainbow, vec3(1.0, 1.0, 0.0), smoothstep(0.16, 0.32, TexCoord.y));\n"
+"    rainbow = mix(rainbow, vec3(0.0, 1.0, 0.0), smoothstep(0.32, 0.48, TexCoord.y));\n"
+"    rainbow = mix(rainbow, vec3(0.0, 0.0, 1.0), smoothstep(0.48, 0.64, TexCoord.y));\n"
+"    rainbow = mix(rainbow, vec3(0.5, 0.0, 1.0), smoothstep(0.64, 0.80, TexCoord.y));\n"
+"    rainbow = mix(rainbow, vec3(1.0, 0.0, 1.0), smoothstep(0.80, 1.0, TexCoord.y));\n"
+"    FragColor = vec4(rainbow, 1.0);\n"
+"}\n";
+
 
 int main(void)
 {
@@ -29,19 +58,30 @@ int main(void)
 
     std::cout << glGetString(GL_VERSION) << std::endl;
 
+    float pos[6] = { -0.5f, -0.5f, 0.0f, 0.5f, 0.5f, -0.5f };
+
+    
+
+    uint32 buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(pos), pos, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT,GL_FALSE, sizeof(float) * 2, 0) ;
+
+    uint32 Shader = CreateShader(VS, PS);
+    glUseProgram(Shader);
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
         /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glBegin(GL_TRIANGLES);
+        
+        glDrawArrays(GL_TRIANGLES, 0, 3);
 
-        glVertex2f(-0.5, -0.5);
-        glVertex2f(0.0, 0.5);
-        glVertex2f(0.5, -0.5);
-
-        glEnd();
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
