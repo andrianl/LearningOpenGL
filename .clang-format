@@ -1,0 +1,40 @@
+# Format Style Options - Created with Clang Power Tools
+---
+AccessModifierOffset: -4
+AlignAfterOpenBracket: DontAlign
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: Yes
+BasedOnStyle: Microsoft
+BraceWrapping: 
+  AfterCaseLabel: false
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterObjCDeclaration: false
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: false
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+  BeforeLambdaBody: false
+  BeforeWhile: true
+BreakBeforeBraces: Allman
+ColumnLimit: 140
+IndentCaseLabels: true
+IndentWidth: 4
+Language: Cpp
+PointerAlignment: Left
+SortIncludes: false
+SpacesBeforeTrailingComments: 2
+TabWidth: 4
+UseTab: Never
+...

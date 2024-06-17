@@ -184,6 +184,7 @@ target/
 
 # Винятки
 !.gitignore
+!.clang-format
 
 Build/
 ProjectFiles/
