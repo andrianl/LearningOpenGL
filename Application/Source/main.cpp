@@ -4,7 +4,6 @@
 #include <Platform.h>
 #include "Shaders.h"
 
-
 std::string VS =
 "#version 330 core\n"
 "layout(location = 0) in vec3 position;\n"
@@ -21,75 +20,65 @@ std::string PS =
 "in vec2 TexCoord;\n"
 "void main()\n"
 "{\n"
-"    vec3 rainbow = mix(vec3(1.0, 0.0, 0.0), vec3(1.0, 0.5, 0.0), smoothstep(0.0, 0.16, TexCoord.y));\n"
-"    rainbow = mix(rainbow, vec3(1.0, 1.0, 0.0), smoothstep(0.16, 0.32, TexCoord.y));\n"
-"    rainbow = mix(rainbow, vec3(0.0, 1.0, 0.0), smoothstep(0.32, 0.48, TexCoord.y));\n"
-"    rainbow = mix(rainbow, vec3(0.0, 0.0, 1.0), smoothstep(0.48, 0.64, TexCoord.y));\n"
-"    rainbow = mix(rainbow, vec3(0.5, 0.0, 1.0), smoothstep(0.64, 0.80, TexCoord.y));\n"
-"    rainbow = mix(rainbow, vec3(1.0, 0.0, 1.0), smoothstep(0.80, 1.0, TexCoord.y));\n"
-"    FragColor = vec4(rainbow, 1.0);\n"
+"    vec3 gradient_color = vec3(1.0, 1.0, 0.5) * (1.0 - TexCoord.y) + vec3(1.0, 0.0, 1.0) * TexCoord.y;\n"
+"    FragColor = vec4(gradient_color, 1.0);\n"
 "}\n";
-
 
 int main(void)
 {
-    GLFWwindow* window;
+	GLFWwindow* window;
 
-    /* Initialize the library */
-    if (!glfwInit())
-        return -1;
+	/* Initialize the library */
+	if (!glfwInit())
+		return -1;
 
-    /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
-    if (!window)
-    {
-        glfwTerminate();
-        return -1;
-    }
+	/* Create a windowed mode window and its OpenGL context */
+	window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
+	if (!window)
+	{
+		glfwTerminate();
+		return -1;
+	}
 
-    /* Make the window's context current */
-    glfwMakeContextCurrent(window);
+	/* Make the window's context current */
+	glfwMakeContextCurrent(window);
 
-    if (glewInit() != GLEW_OK)
-    {
-        std::cout << "Error: GLEW is not OK" << std::endl;
-        return -2;
-    }
+	if (glewInit() != GLEW_OK)
+	{
+		std::cout << "Error: GLEW is not OK" << std::endl;
+		return -2;
+	}
 
-    std::cout << glGetString(GL_VERSION) << std::endl;
+	std::cout << glGetString(GL_VERSION) << std::endl;
 
-    float pos[6] = { -0.5f, -0.5f, 0.0f, 0.5f, 0.5f, -0.5f };
+	float pos[6] = { -0.5f, -0.5f, 0.0f, 0.5f, 0.5f, -0.5f };
 
-    
+	uint32 buffer;
+	glGenBuffers(1, &buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(pos), pos, GL_STATIC_DRAW);
 
-    uint32 buffer;
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(pos), pos, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT,GL_FALSE, sizeof(float) * 2, 0) ;
+	uint32 Shader = CreateShader(VS, PS);
+	glUseProgram(Shader);
 
-    uint32 Shader = CreateShader(VS, PS);
-    glUseProgram(Shader);
-
-    /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(window))
-    {
-        /* Render here */
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+	/* Loop until the user closes the window */
+	while (!glfwWindowShouldClose(window))
+	{
+		/* Render here */
+		glClear(GL_COLOR_BUFFER_BIT);
 
 
-        /* Swap front and back buffers */
-        glfwSwapBuffers(window);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		/* Swap front and back buffers */
+		glfwSwapBuffers(window);
 
-        /* Poll for and process events */
-        glfwPollEvents();
-    }
+		/* Poll for and process events */
+		glfwPollEvents();
+	}
 
-    glfwTerminate();
-    return 0;
+	glfwTerminate();
+	return 0;
 }

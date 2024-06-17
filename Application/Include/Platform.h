@@ -102,26 +102,6 @@ inline machine_address GetPointerAddress(const volatile void *ptr)
     return (reinterpret_cast<machine_address>(ptr));
 }
 
-inline const float &asfloat(const int32 &i)
-{
-    return (reinterpret_cast<const float &>(i));
-}
-
-inline const float &asfloat(const uint32 &i)
-{
-    return (reinterpret_cast<const float &>(i));
-}
-
-inline const int32 &asint(const float &f)
-{
-    return (reinterpret_cast<const int32 &>(f));
-}
-
-inline const uint32 &asuint(const float &f)
-{
-    return (reinterpret_cast<const uint32 &>(f));
-}
-
 #undef CopyMemory
 #undef FillMemory
 #undef ClearMemory

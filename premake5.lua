@@ -1,11 +1,10 @@
 -- Set up the workspace
 workspace (path.getbasename(os.getcwd()))
-    configurations { "Debug", "Release" }
-    platforms { "Win32", "Win64"}
-    --toolset ("clang")
+    configurations { "Debug", "DebugApp", "Development", "Test", "Shipping" }
+    platforms { "Win32", "Win64" }
     location "ProjectFiles" -- Specify the location for generated project files
     startproject "Application"
-    defines { "GLEW_STATIC" }  
+    defines { "GLEW_STATIC" }
 
     filter { "platforms:Win32" }
         system "Windows"
@@ -15,7 +14,30 @@ workspace (path.getbasename(os.getcwd()))
         system "Windows"
         architecture "x86_64"
 
-      
+    filter "system:windows"
+        systemversion "latest"
+        defines { "PLATFORM_DESKTOP" }
+
+    filter "configurations:Debug"
+        runtime "Debug"
+        symbols "Full"
+        optimize "Off"
+
+    filter "configurations:Development"
+        runtime "Release"
+        symbols "On"
+        optimize "On"
+
+    filter "configurations:Test"
+        runtime "Release"
+        symbols "Off"
+        optimize "On"
+
+    filter "configurations:Shipping"
+        runtime "Release"
+        symbols "Off"
+        optimize "Full"
+
 
 -- GLFW Project
 project "GLFW"
@@ -37,16 +59,12 @@ project "GLFW"
     }
 
     filter "system:windows"
-        systemversion "latest"
         defines { "_GLFW_WIN32" }
 
-    filter "configurations:Debug"
+    filter "configurations:DebugApp"
         runtime "Debug"
-        symbols "on"
-
-    filter "configurations:Release"
-        runtime "Release"
-        optimize "Full"
+        symbols "Off"
+        optimize "On"
 
 
 -- GLEW Project
@@ -56,7 +74,7 @@ project "GLEW"
     cdialect "C11"
     targetdir ("Build/%{cfg.buildcfg}/%{cfg.platform}/")
     objdir ("Intermediate/%{cfg.buildcfg}/%{cfg.platform}/") -- Specify the location for intermediate files
-    defines { "GLEW_STATIC" }  
+    defines { "GLEW_STATIC" }
 
     files
     {
@@ -69,16 +87,10 @@ project "GLEW"
         "GLEW/include"
     }
 
-    filter "system:windows"
-        systemversion "latest"
-
-    filter "configurations:Debug"
+    filter "configurations:DebugApp"
         runtime "Debug"
-        symbols "on"
-
-    filter "configurations:Release"
-        runtime "Release"
-        optimize "Full"        
+        symbols "Off"
+        optimize "On"
 
 
 -- App Project
@@ -109,31 +121,22 @@ project "Application"
         "opengl32" -- Link the OpenGL library
     }
 
-    libdirs 
-    { 
+    libdirs
+    {
         "Build/%{cfg.buildcfg}/%{cfg.platform}/GLFW",
         "Build/%{cfg.buildcfg}/%{cfg.platform}/GLEW",
         "Build/%{cfg.buildcfg}/%{cfg.platform}/",
     }
 
-    vpaths 
+    vpaths
     {
         ["Header Files"] = { "Application/Include/**.h" },
         ["Source Files"] = { "Application/Source/**.cpp" }
     }
 
-    filter "system:windows"
-        systemversion "latest"
-        defines { "PLATFORM_DESKTOP" }
-
-    filter "configurations:Debug"
+    filter "configurations:DebugApp"
         runtime "Debug"
+        symbols "On"
         optimize "Off"
-        symbols "on"
 
-    filter "configurations:Release"
-        runtime "Release"
-        optimize "Full"
-
-        
-require "vscode"  
+require "vscode"
