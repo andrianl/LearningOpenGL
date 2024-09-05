@@ -1,84 +1,105 @@
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <iostream>
-#include <Platform.h>
-#include "Shaders.h"
-
-std::string VS =
-"#version 330 core\n"
-"layout(location = 0) in vec3 position;\n"
-"out vec2 TexCoord;\n"
-"void main()\n"
-"{\n"
-"    TexCoord = position.xy * 0.5 + 0.5;\n"
-"    gl_Position = vec4(position, 1.0);\n"
-"}\n";
-
-std::string PS =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec2 TexCoord;\n"
-"void main()\n"
-"{\n"
-"    vec3 gradient_color = vec3(1.0, 1.0, 0.5) * (1.0 - TexCoord.y) + vec3(1.0, 0.0, 1.0) * TexCoord.y;\n"
-"    FragColor = vec4(gradient_color, 1.0);\n"
-"}\n";
+#include <GL/glew.h>     // Include GLEW to manage OpenGL extensions
+#include <GLFW/glfw3.h>  // Include GLFW for window creation and management
+#include <iostream>      // Include for standard I/O operations
+#include <Platform.h>    // Platform-specific includes (this is custom, probably for cross-platform support)
+#include "Shaders.h"     // Custom header for shader-related functions
 
 int main(void)
 {
-	GLFWwindow* window;
+    GLFWwindow* window;
 
-	/* Initialize the library */
-	if (!glfwInit())
-		return -1;
+    /* Initialize the GLFW library */
+    if (!glfwInit()) return -1;  // Return if initialization failed
 
-	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(640, 480, "Learn OpenGL", NULL, NULL);
-	if (!window)
-	{
-		glfwTerminate();
-		return -1;
-	}
+    /* Create a windowed mode window and its OpenGL context */
+    window = glfwCreateWindow(640, 480, "Learn OpenGL", NULL, NULL);
+    if (!window)
+    {
+        glfwTerminate();  // Terminate GLFW if window creation failed
+        return -1;
+    }
 
-	/* Make the window's context current */
-	glfwMakeContextCurrent(window);
+    /* Make the window's context current */
+    glfwMakeContextCurrent(window);
 
-	if (glewInit() != GLEW_OK)
-	{
-		std::cout << "Error: GLEW is not OK" << std::endl;
-		return -2;
-	}
+    /* Initialize GLEW and check for errors */
+    if (glewInit() != GLEW_OK)
+    {
+        std::cout << "Error: GLEW is not OK" << std::endl;
+        return -2;
+    }
 
-	std::cout << glGetString(GL_VERSION) << std::endl;
+    // Disable vertical sync (0 to avoid limiting frame rate)
+    glfwSwapInterval(0);
 
-	float pos[6] = { -0.5f, -0.5f, 0.0f, 0.5f, 0.5f, -0.5f };
+    // Print the version of OpenGL in use
+    std::cout << glGetString(GL_VERSION) << std::endl;
 
-	uint32 buffer;
-	glGenBuffers(1, &buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(pos), pos, GL_STATIC_DRAW);
+    // Vertex positions for a square (two triangles)
+    float pos[] = {
+        -0.5f, -0.5f,  // Vertex 0 (bottom-left)
+        0.5f, -0.5f,   // Vertex 1 (bottom-right)
+        0.5f, 0.5f,    // Vertex 2 (top-right)
+        -0.5f, 0.5f    // Vertex 3 (top-left)
+    };
 
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+    // Indices defining two triangles using the vertices
+    uint32 indices[] = {
+        0, 1, 2,  // Indices for first triangle
+        2, 3, 0   // Indices for second triangle
+    };
 
-	uint32 Shader = CreateShader(VS, PS);
-	glUseProgram(Shader);
+    // Size of the vertex positions array
+    constexpr auto size_of_pos = sizeof(pos);
+    // Size of the indices array
+    constexpr auto size_of_indicies = sizeof(indices);
+    // Total number of indices in the array
+    constexpr auto number_of_indicies = sizeof(indices) / sizeof(indices[0]);
+    // Total number of triangles
+    constexpr auto number_of_tries = 2;
+    // Number of vertices per triangle
+    constexpr auto number_of_vertex = static_cast<float>(size_of_pos) / sizeof(float) / number_of_tries;
 
-	/* Loop until the user closes the window */
-	while (!glfwWindowShouldClose(window))
-	{
-		/* Render here */
-		glClear(GL_COLOR_BUFFER_BIT);
+    // Generate and bind a buffer for vertex data (VBO)
+    uint32 buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, size_of_pos, pos, GL_STATIC_DRAW);
 
+    // Enable the vertex attribute array and define how the vertex data is laid out
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
 
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		/* Swap front and back buffers */
-		glfwSwapBuffers(window);
+    // Generate and bind a buffer for element indices (EBO or IBO)
+    uint32 index_buffer_object;
+    glGenBuffers(1, &index_buffer_object);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_object);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size_of_indicies, indices, GL_STATIC_DRAW);
 
-		/* Poll for and process events */
-		glfwPollEvents();
-	}
+    // Parse the shader from a file
+    ShaderSourceProgram Source = ParseShader("../Application/Resources/Shaders/TestShader.shader");
 
-	glfwTerminate();
-	return 0;
+    // Create a shader program from vertex and pixel shaders
+    uint32 Shader = CreateShader(Source.VertexShader, Source.PixelShader);
+    glUseProgram(Shader);  // Use the created shader program
+
+    /* Main render loop: this loop continues until the user closes the window */
+    while (!glfwWindowShouldClose(window))
+    {
+        /* Clear the screen */
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        /* Render the elements using indices, defined as triangles */
+        glDrawElements(GL_TRIANGLES, number_of_indicies, GL_UNSIGNED_INT, nullptr);
+
+        /* Swap front and back buffers (double-buffering) */
+        glfwSwapBuffers(window);
+
+        /* Poll for and process events (keyboard, mouse, etc.) */
+        glfwPollEvents();
+    }
+
+    /* Terminate GLFW and clean up */
+    glfwTerminate();
+    return 0;
 }

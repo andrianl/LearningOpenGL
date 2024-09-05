@@ -109,7 +109,8 @@ project "Application"
     files
     {
         "Application/Include/**.h",
-        "Application/Source/**.cpp"
+        "Application/Source/**.cpp",
+        "Application/Resources/**/"
     }
 
     includedirs
@@ -136,7 +137,8 @@ project "Application"
     vpaths
     {
         ["Header Files"] = { "Application/Include/**.h" },
-        ["Source Files"] = { "Application/Source/**.cpp" }
+        ["Source Files"] = { "Application/Source/**.cpp" },
+        ["Resources Files"] = {"Application/Resources/**"}
     }
 
     filter "configurations:DebugApp"

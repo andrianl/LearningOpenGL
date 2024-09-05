@@ -1,6 +1,51 @@
 #include "Shaders.h"
 #include "GL/glew.h"
+#include <string>
+#include <sstream>
 #include <iostream>
+#include <fstream>
+
+ShaderSourceProgram ParseShader(const std::string& filepath)
+{
+    enum class ShaderType
+    {
+        None = -1,
+        Vertex = 0,
+        Pixel = 1
+    };
+
+    std::ifstream stream(filepath);
+    if (!stream.is_open())
+    {
+        throw std::runtime_error("Could not open file: " + filepath);
+    }
+
+    std::string line;
+    std::stringstream ss[2];
+    ShaderType currentType = ShaderType::None;
+
+    while (getline(stream, line))
+    {
+        if (line.find("#shader") != std::string::npos)
+        {
+            if (line.find("vertex") != std::string::npos)
+            {
+                currentType = ShaderType::Vertex;
+            }
+            else if (line.find("pixel") != std::string::npos)
+            {
+                currentType = ShaderType::Pixel;
+            }
+        }
+        else if (currentType != ShaderType::None)
+        {
+            ss[static_cast<int>(currentType)] << line << '\n';
+        }
+    }
+
+    return {ss[0].str(), ss[1].str()};
+}
+
 
 uint32 CreateShader(const std::string& VertexShader, const std::string& PixelShader)
 {
