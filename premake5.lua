@@ -1,6 +1,6 @@
 -- Set up the workspace
 workspace (path.getbasename(os.getcwd())) -- Get the current working directory and use its name as the workspace name
-    configurations { "Debug", "DebugApp", "Development", "Test", "Shipping" } -- Define build configurations
+    configurations { "Debug", "Release" } -- Define build configurations
     platforms { "Win32", "Win64" } -- Define target platforms
     location "ProjectFiles" -- Specify the location for generated project files
     startproject "Application" -- Set the default startup project
@@ -20,24 +20,17 @@ workspace (path.getbasename(os.getcwd())) -- Get the current working directory a
 
     filter "configurations:Debug" -- Filter settings for Debug configuration
         runtime "Debug"
+        defines { "DEBUG" }
         symbols "Full"
         optimize "Off"
 
-    filter "configurations:Development" -- Filter settings for Development configuration
+    filter "configurations:Release" -- Filter settings for Shipping configuration
         runtime "Release"
-        symbols "On"
-        optimize "On"
-
-    filter "configurations:Test" -- Filter settings for Test configuration
-        runtime "Release"
-        symbols "Off"
-        optimize "On"
-
-    filter "configurations:Shipping" -- Filter settings for Shipping configuration
-        runtime "Release"
+        defines { "RELEASE" }
         symbols "Off"
         optimize "Full"
 
+    require("vscode")
 
 -- Project configuration for GLFW, a multi-platform library for OpenGL, window and input
 project "GLFW"
@@ -63,11 +56,6 @@ project "GLFW"
     filter "system:windows"
         defines { "_GLFW_WIN32" }
 
-    filter "configurations:DebugApp"
-        runtime "Debug"
-        symbols "Off"
-        optimize "On"
-
 
 -- Project configuration for GLEW, The OpenGL Extension Wrangler Library
 project "GLEW"
@@ -89,13 +77,6 @@ project "GLEW"
     {
         "GLEW/include"
     }
-
-    filter "configurations:DebugApp"
-        runtime "Debug"
-        symbols "Off"
-        optimize "On"
-
-
 
 -- Project configuration for the main application that will use GLFW and GLEW libraries
 project "Application"
@@ -140,11 +121,3 @@ project "Application"
         ["Source Files"] = { "Application/Source/**.cpp" },
         ["Resources Files"] = {"Application/Resources/**"}
     }
-
-    filter "configurations:DebugApp"
-        runtime "Debug"
-        symbols "On"
-        optimize "Off"
-
--- Include Visual Studio Code integration which might be used for tasks like building or debugging within VS Code editor environment.
-require("vscode")
