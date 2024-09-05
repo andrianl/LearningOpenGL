@@ -13,9 +13,10 @@ The video series offers a structured approach to understanding OpenGL and serves
 
 ## Build
 
-This project uses premake for its build configuration. To generate the Visual Studio 2022 project files, run the `GenerateProjectFiles.bat` batch file included in the repository.
+This project uses Premake for its build configuration. To generate the Visual Studio 2022 project files, ensure that Premake is installed and available at the following path on your system: C:\Path\premake\premake5.exe
+Once Premake is installed at this location, you can generate the Visual Studio 2022 project files by running the GenerateProjectFiles.bat batch file included in the repository.
 
-Future updates will include script files for building under different IDEs or operating systems.
+Note: In future updates, this process will be improved to work across different IDEs and operating systems without requiring manual setup.
 
 ## Screenshots
 
