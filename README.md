@@ -22,3 +22,4 @@ Future updates will include script files for building under different IDEs or op
 Screenshots of the graphics rendered using OpenGL will be displayed here.
 
 ![Alt text](Screenshots/triangle.png "A stunning triangle rendered with OpenGL")
+![Alt text](Screenshots/square.jpg "And a stunning square rendered with OpenGL")
