@@ -18082,7 +18082,7 @@ static GLenum GLEWAPIENTRY glewContextInit ()
         j = _glewNextSpace(i);
 
         /* Copy extension into NUL terminated string */
-        if (j-i >= (ptrdiff_t) sizeof(ext))
+        if (j-i >= (ptrdiff_t) sizeof(ext)) //-V769
           continue;
         _glewStrCopy(ext, i, ' ');
 
@@ -23133,7 +23133,7 @@ int __stdcall DllMainCRTStartup(void* instance, unsigned reason, void* reserved)
   return 1;
 }
 #endif
-GLboolean GLEWAPIENTRY glewIsSupported (const char* name)
+GLboolean GLEWAPIENTRY glewIsSupported (const char* name) //-V553
 {
   const GLubyte* pos = (const GLubyte*)name;
   GLuint len = _glewStrLen(pos);

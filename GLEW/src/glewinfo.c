@@ -53,7 +53,7 @@
 #include <GL/Regal.h>
 #endif
 
-static FILE* f;
+static FILE* f; //-V707
 
 /* Command-line parameters for GL context creation */
 
@@ -88,8 +88,12 @@ void glewDestroyContext ();
 static GLboolean glewPrintExt (const char* name, GLboolean def1, GLboolean def2, GLboolean def3)
 {
   unsigned int i;
+
+  size_t name_length = strlen(name); // fix warning v814
+
   fprintf(f, "\n%s:", name);
-  for (i=0; i<62-strlen(name); i++) fprintf(f, " ");
+  for (i = 0; i < 62 - name_length; i++) // fix warning v814
+      fprintf(f, " ");
   fprintf(f, "%s ", def1 ? "OK" : "MISSING");
   if (def1 != def2)
     fprintf(f, "[%s] ", def2 ? "OK" : "MISSING");
@@ -97,7 +101,8 @@ static GLboolean glewPrintExt (const char* name, GLboolean def1, GLboolean def2,
     fprintf(f, "[%s]\n", def3 ? "OK" : "MISSING");
   else
     fprintf(f, "\n");
-  for (i=0; i<strlen(name)+1; i++) fprintf(f, "-");
+  for (i = 0; i < name_length + 1; i++) // fix warning v814
+      fprintf(f, "-");
   fprintf(f, "\n");
   fflush(f);
   return def1 || def2 || def3 || glewExperimental; /* Enable per-function info too? */
@@ -106,10 +111,12 @@ static GLboolean glewPrintExt (const char* name, GLboolean def1, GLboolean def2,
 static void glewInfoFunc (GLboolean fi, const char* name, GLint undefined)
 {
   unsigned int i;
+    size_t name_length = strlen(name);
   if (fi)
   {
     fprintf(f, "  %s:", name);
-    for (i=0; i<60-strlen(name); i++) fprintf(f, " ");
+      for (i = 0; i < 60 - name_length; i++)
+          fprintf(f, " ");
     fprintf(f, "%s\n", undefined ? "MISSING" : "OK");
     fflush(f);
   }
@@ -14744,7 +14751,7 @@ static void _glewInfo_GLX_SUN_video_resize (void)
 
 /* ------------------------------------------------------------------------ */
 
-static void glewInfo (void)
+static void glewInfo (void) //-V553
 {
 #ifdef GL_VERSION_1_1
   _glewInfo_GL_VERSION_1_1();
@@ -18757,8 +18764,8 @@ void glewDestroyContext ()
 #elif defined(_WIN32)
 
 HWND wnd = NULL;
-HDC dc = NULL;
-HGLRC rc = NULL;
+HDC dc = NULL; //-V707
+HGLRC rc = NULL; //-V707
 
 GLboolean glewCreateContext (struct createParams* params)
 {
