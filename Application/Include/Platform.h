@@ -11,10 +11,12 @@
 extern "C"
 {
     void *__cdecl memcpy(void *, const void *, size_t);
-#pragma intrinsic(memcpy)
-
     void *__cdecl memset(void *, int, size_t);
-#pragma intrinsic(memset)
+
+#ifdef _WIN32
+    #pragma intrinsic(memcpy)
+    #pragma intrinsic(memset)
+#endif
 }
 
 #if defined(_MSC_VER)

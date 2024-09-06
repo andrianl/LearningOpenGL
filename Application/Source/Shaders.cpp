@@ -78,7 +78,7 @@ uint32 CompileShader(const std::string& Source, uint32 Type)
 	{
 		int32 length;
 		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-		char* message = (char*)_malloca(length * sizeof(char));
+		char* message = (char*)alloca(length * sizeof(char));
 		glGetShaderInfoLog(id, length, &length, message);
 		const char* shader_type = Type == GL_VERTEX_SHADER ? "vertex" : "pixel";
 		std::cerr << "Failed to compile " << shader_type << " shader!" << std::endl;

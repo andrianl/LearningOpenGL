@@ -56,9 +56,9 @@ int main(void)
     // Total number of indices in the array
     constexpr auto number_of_indicies = sizeof(indices) / sizeof(indices[0]);
     // Total number of triangles
-    constexpr auto number_of_tries = 2;
+    //constexpr auto number_of_tries = 2;
     // Number of vertices per triangle
-    constexpr auto number_of_vertex = static_cast<float>(size_of_pos) / sizeof(float) / number_of_tries;
+    //constexpr auto number_of_vertex = size_of_pos / sizeof(float) / number_of_tries;
 
     // Generate and bind a buffer for vertex data (VBO)
     uint32 buffer;
