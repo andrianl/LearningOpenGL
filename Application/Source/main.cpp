@@ -3,6 +3,7 @@
 #include <iostream>      // Include for standard I/O operations
 #include <Platform.h>    // Platform-specific includes (this is custom, probably for cross-platform support)
 #include "Shaders.h"     // Custom header for shader-related functions
+#include <Core.h>
 
 int main(void)
 {
@@ -12,7 +13,7 @@ int main(void)
     if (!glfwInit()) return -1;  // Return if initialization failed
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(640, 480, "Learn OpenGL", NULL, NULL);
+    window = glfwCreateWindow(1024, 720, "Learn OpenGL", NULL, NULL);
     if (!window)
     {
         glfwTerminate();  // Terminate GLFW if window creation failed
@@ -36,15 +37,15 @@ int main(void)
     std::cout << glGetString(GL_VERSION) << std::endl;
 
     // Vertex positions for a square (two triangles)
-    float pos[] = {
+    const float pos[] = {
         -0.5f, -0.5f,  // Vertex 0 (bottom-left)
-        0.5f, -0.5f,   // Vertex 1 (bottom-right)
-        0.5f, 0.5f,    // Vertex 2 (top-right)
-        -0.5f, 0.5f    // Vertex 3 (top-left)
+         0.5f, -0.5f,   // Vertex 1 (bottom-right)
+         0.5f,  0.5f,    // Vertex 2 (top-right)
+        -0.5f,  0.5f    // Vertex 3 (top-left)
     };
 
     // Indices defining two triangles using the vertices
-    uint32 indices[] = {
+    const uint32 indices[] = {
         0, 1, 2,  // Indices for first triangle
         2, 3, 0   // Indices for second triangle
     };
@@ -77,10 +78,10 @@ int main(void)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size_of_indicies, indices, GL_STATIC_DRAW);
 
     // Parse the shader from a file
-    ShaderSourceProgram Source = ParseShader("../Application/Resources/Shaders/TestShader.shader");
+    const ShaderSourceProgram Source = ParseShader("Application/Resources/Shaders/Test.shader");
 
     // Create a shader program from vertex and pixel shaders
-    uint32 Shader = CreateShader(Source.VertexShader, Source.PixelShader);
+    const uint32 Shader = CreateShader(Source.VertexShader, Source.PixelShader);
     glUseProgram(Shader);  // Use the created shader program
 
     /* Main render loop: this loop continues until the user closes the window */
@@ -88,6 +89,8 @@ int main(void)
     {
         /* Clear the screen */
         glClear(GL_COLOR_BUFFER_BIT);
+
+        glUniform1f(glGetUniformLocation(Shader, "time"), glfwGetTime());
 
         /* Render the elements using indices, defined as triangles */
         glDrawElements(GL_TRIANGLES, number_of_indicies, GL_UNSIGNED_INT, nullptr);
@@ -101,5 +104,12 @@ int main(void)
 
     /* Terminate GLFW and clean up */
     glfwTerminate();
+    MemoryInfo memInfo = getMemoryInfo();
+    std::cout << "Total allocated memory: " << memInfo.totalAllocated << " bytes" << std::endl;
+    std::cout << "Total freed memory: " << memInfo.totalFreed << " bytes" << std::endl;
+    std::cout << "Used memory: " << memInfo.getUsedMemory() << " bytes" << std::endl;
+    std::cout << "Memory allocation count: " << memInfo.allocationCount << std::endl;
+    std::cout << "Memory deallocation count: " << memInfo.deallocationCount << std::endl;
+
     return 0;
 }

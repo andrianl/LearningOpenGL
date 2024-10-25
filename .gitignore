@@ -190,3 +190,5 @@ Build/
 ProjectFiles/
 obj/
 Intermediate/
+*.cmd
+*.i

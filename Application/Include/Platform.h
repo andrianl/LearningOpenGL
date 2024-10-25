@@ -1,11 +1,3 @@
-//
-// This file is part of the Terathon Common Library, by Eric Lengyel.
-// Copyright 1999-2024, Terathon Software LLC
-//
-// This software is distributed under the MIT License.
-// Separate proprietary licenses are available from Terathon Software.
-//
-
 #pragma once
 
 extern "C"
@@ -45,12 +37,6 @@ typedef unsigned int machine_address;
 #endif
 
 #define restrict __restrict
-
-#pragma warning(disable : 4100) // unreferenced formal parameter
-#pragma warning(disable : 4244) // conversion, possible loss of data
-#pragma warning(disable : 4324) // structure was padded due to alignment specifier
-#pragma warning(disable : 4458) // declaration hides class member
-#pragma warning(disable : 4522) // multiple assignment operators specified
 
 #elif defined(__ORBIS__) || defined(__PROSPERO__)
 
