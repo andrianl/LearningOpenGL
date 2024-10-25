@@ -186,6 +186,13 @@ target/
 !.gitignore
 !.clang-format
 
+# Ігнорувати файли створені make
+*.make
+
+# Ігнорувати файли PVS Studio
+*.pvslog
+*.pvsconfig
+
 Build/
 ProjectFiles/
 obj/
