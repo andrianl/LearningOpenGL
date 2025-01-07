@@ -1,5 +1,5 @@
 #shader vertex
-#version 330 core
+#version 460 core
 layout(location = 0) in vec3 position;
 out vec2 TexCoord;
 void main()
@@ -9,7 +9,7 @@ void main()
 }
 
 #shader pixel
-#version 330 core
+#version 460 core
 out vec4 FragColor;
 in vec2 TexCoord;
 

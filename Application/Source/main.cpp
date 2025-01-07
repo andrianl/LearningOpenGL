@@ -4,7 +4,7 @@
 #include <Platform.h>    // Platform-specific includes (custom, probably for cross-platform support)
 #include "Window.h"
 #include "Input.h"
-#include "Shaders.h"     // Custom header for shader-related functions
+#include "Shaders.h"  // Custom header for shader-related functions
 #include <Core.h>
 
 int main(void)
@@ -86,12 +86,9 @@ int main(void)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_object);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size_of_indices, indices, GL_STATIC_DRAW);
 
-    // Parse the shader from a file
-    const ShaderSourceProgram Source = ParseShader("Application/Resources/Shaders/Test.shader");
+    const Shader Gradient("Application/Resources/Shaders/Test.shader");
 
-    // Create a shader program from vertex and fragment shaders
-    const uint32 Shader = CreateShader(Source.VertexShader, Source.PixelShader);
-    glUseProgram(Shader);  // Use the created shader program
+    Gradient.Use();
 
     // Main render loop: continues until the user closes the window
     while (!glfwWindowShouldClose(window))
@@ -104,7 +101,7 @@ int main(void)
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUniform1f(glGetUniformLocation(Shader, "time"), static_cast<GLfloat>(glfwGetTime()));
+        glUniform1f(glGetUniformLocation(Gradient.GetShaderID(), "time"), static_cast<GLfloat>(glfwGetTime()));
 
         // Render the elements using indices, defined as triangles
         glDrawElements(GL_TRIANGLES, number_of_indices, GL_UNSIGNED_INT, nullptr);
