@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>  // Include GLFW for window creation and management
 #include <iostream>      // Include for standard I/O operations
 #include <Platform.h>    // Platform-specific includes (custom, probably for cross-platform support)
+#include "Window.h"
+#include "Input.h"
 #include "Shaders.h"     // Custom header for shader-related functions
 #include <Core.h>
 
@@ -12,12 +14,12 @@ int main(void)
     // Initialize the GLFW library
     if (!glfwInit()) return -1;  // Return if initialization failed
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Create a windowed mode window and its OpenGL context
-    window = glfwCreateWindow(1024, 720, "Learn OpenGL", NULL, NULL);
+    window = glfwCreateWindow(1920, 1080, "Learn OpenGL", NULL, NULL);
     if (!window)
     {
         glfwTerminate();  // Terminate GLFW if window creation failed
@@ -33,6 +35,9 @@ int main(void)
         std::cerr << "Error: GLEW initialization failed!" << std::endl;
         return -2;
     }
+
+    glViewport(0, 0, 1920, 1080);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     // Disable vertical sync (0 to avoid limiting frame rate)
     glfwSwapInterval(0);
@@ -73,7 +78,7 @@ int main(void)
 
     // Enable the vertex attribute array and define how the vertex data is laid out
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, nullptr);
 
     // Generate and bind a buffer for element indices (EBO or IBO)
     uint32 index_buffer_object;
@@ -91,10 +96,15 @@ int main(void)
     // Main render loop: continues until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
+        processInput(window);
+
+        int mode = ChangePolygonMode(window);
+        glPolygonMode(GL_FRONT_AND_BACK, mode);
+
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUniform1f(glGetUniformLocation(Shader, "time"), glfwGetTime());
+        glUniform1f(glGetUniformLocation(Shader, "time"), static_cast<GLfloat>(glfwGetTime()));
 
         // Render the elements using indices, defined as triangles
         glDrawElements(GL_TRIANGLES, number_of_indices, GL_UNSIGNED_INT, nullptr);
