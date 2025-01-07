@@ -1,14 +1,9 @@
-#include <GL/glew.h>     // Include GLEW to manage OpenGL extensions
-#include <GLFW/glfw3.h>  // Include GLFW for window creation and management
-#include <iostream>      // Include for standard I/O operations
-#include <Platform.h>    // Platform-specific includes (custom, probably for cross-platform support)
-#include "Window.h"
-#include "Input.h"
-#include "Shaders.h"  // Custom header for shader-related functions
+#define STB_IMAGE_IMPLEMENTATION
 #include <Core.h>
 
 int main(void)
 {
+    MemoryInfo& memInfo = getMemoryInfo();
     GLFWwindow* window;
 
     // Initialize the GLFW library
@@ -45,12 +40,13 @@ int main(void)
     // Print the version of OpenGL in use
     std::cout << glGetString(GL_VERSION) << std::endl;
 
-    // Vertex positions for a square (two triangles)
-    const float pos[] = {
-        -0.5f, -0.5f,  // Vertex 0 (bottom-left)
-        0.5f, -0.5f,   // Vertex 1 (bottom-right)
-        0.5f, 0.5f,    // Vertex 2 (top-right)
-        -0.5f, 0.5f    // Vertex 3 (top-left)
+// Vertex positions (2D) and texture coordinates (interleaved)
+    const float vertices[] = {
+        // Position           // Texture Coordinates
+        -0.5f, -0.5f, 0.0f, 0.0f,  // Vertex 0 (bottom-left)
+        0.5f, -0.5f, 1.0f, 0.0f,   // Vertex 1 (bottom-right)
+        0.5f, 0.5f, 1.0f, 1.0f,    // Vertex 2 (top-right)
+        -0.5f, 0.5f, 0.0f, 1.0f    // Vertex 3 (top-left)
     };
 
     // Indices defining two triangles using the vertices
@@ -59,12 +55,13 @@ int main(void)
         2, 3, 0   // Indices for second triangle
     };
 
+
     uint32 VAO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
 
     // Calculate the size of the vertex positions array
-    constexpr auto size_of_pos = sizeof(pos);
+    constexpr auto size_of_pos = sizeof(vertices);
     // Calculate the size of the indices array
     constexpr auto size_of_indices = sizeof(indices);
     // Calculate the total number of indices in the array
@@ -74,11 +71,15 @@ int main(void)
     uint32 buffer;
     glGenBuffers(1, &buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, size_of_pos, pos, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, size_of_pos, vertices, GL_STATIC_DRAW);
 
-    // Enable the vertex attribute array and define how the vertex data is laid out
+    // Position attribute (2D positions)
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);  // 2D position
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, nullptr);
+
+    // Texture coordinate attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));  // Texture coordinates
+    glEnableVertexAttribArray(1);
 
     // Generate and bind a buffer for element indices (EBO or IBO)
     uint32 index_buffer_object;
@@ -86,11 +87,33 @@ int main(void)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_object);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size_of_indices, indices, GL_STATIC_DRAW);
 
-    const Shader Gradient("Application/Resources/Shaders/Test.shader");
+    const Shader Gradient("Application/Resources/Shaders/TestTexture.shader");
 
     Gradient.Use();
 
-    // Main render loop: continues until the user closes the window
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load and generate the texture
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load("Application/Resources/Textures/container.jpg", &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cerr << "Failed to load texture" << std::endl;
+    }
+
+
+    //Main render loop: continues until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
@@ -115,7 +138,7 @@ int main(void)
 
     // Terminate GLFW and clean up
     glfwTerminate();
-    MemoryInfo& memInfo = getMemoryInfo();
+    stbi_image_free(data);
     std::cout << "Total allocated memory: " << memInfo.totalAllocated << " bytes" << std::endl;
     std::cout << "Total freed memory: " << memInfo.totalFreed << " bytes" << std::endl;
     std::cout << "Used memory: " << memInfo.getUsedMemory() << " bytes" << std::endl;

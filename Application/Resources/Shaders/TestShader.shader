@@ -18,3 +18,5 @@ void main()
     vec3 gradient_color = vec3(1.0, 1.0, 0.5) * (1.0 - TexCoord.y) + vec3(1.0, 0.0, 1.0) * TexCoord.y;
     FragColor = vec4(gradient_color, 1.0);
 };
+
+
