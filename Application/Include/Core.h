@@ -17,7 +17,7 @@ MemoryInfo memoryInfo;
 // Overloaded new operator
 void* operator new(std::size_t size)
 {
-    // std::cout << "Memory Allocation: " << size << " bytes" << std::endl;
+    //std::cout << "Memory Allocation: " << size << " bytes" << std::endl;
     memoryInfo.totalAllocated += size;  // Update total allocated memory
     memoryInfo.allocationCount++;       // Update number of memory allocations
     void* p = std::malloc(size);
@@ -31,14 +31,14 @@ void* operator new(std::size_t size)
 // Overloaded delete operator
 void operator delete(void* p, std::size_t size) noexcept
 {
-    std::cout << "Free Memory: " << size << " bytes" << std::endl;
+    //std::cout << "Free Memory: " << size << " bytes" << std::endl;
     memoryInfo.totalFreed += size;   // Update total freed memory
     memoryInfo.deallocationCount++;  // Update number of memory deallocations
     std::free(p);
 }
 
 // Function to get memory information
-MemoryInfo getMemoryInfo()
+MemoryInfo& getMemoryInfo()
 {
     return memoryInfo;
 }

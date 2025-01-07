@@ -85,11 +85,6 @@ typedef unsigned int machine_address;
 
 #endif
 
-inline machine_address GetPointerAddress(const volatile void *ptr)
-{
-    return (reinterpret_cast<machine_address>(ptr));
-}
-
 #undef CopyMemory
 #undef FillMemory
 #undef ClearMemory

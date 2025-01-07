@@ -1,7 +1,7 @@
 #include <GL/glew.h>     // Include GLEW to manage OpenGL extensions
 #include <GLFW/glfw3.h>  // Include GLFW for window creation and management
 #include <iostream>      // Include for standard I/O operations
-#include <Platform.h>    // Platform-specific includes (this is custom, probably for cross-platform support)
+#include <Platform.h>    // Platform-specific includes (custom, probably for cross-platform support)
 #include "Shaders.h"     // Custom header for shader-related functions
 #include <Core.h>
 
@@ -9,10 +9,14 @@ int main(void)
 {
     GLFWwindow* window;
 
-    /* Initialize the GLFW library */
+    // Initialize the GLFW library
     if (!glfwInit()) return -1;  // Return if initialization failed
 
-    /* Create a windowed mode window and its OpenGL context */
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    // Create a windowed mode window and its OpenGL context
     window = glfwCreateWindow(1024, 720, "Learn OpenGL", NULL, NULL);
     if (!window)
     {
@@ -20,13 +24,13 @@ int main(void)
         return -1;
     }
 
-    /* Make the window's context current */
+    // Make the window's context current
     glfwMakeContextCurrent(window);
 
-    /* Initialize GLEW and check for errors */
+    // Initialize GLEW and check for errors
     if (glewInit() != GLEW_OK)
     {
-        std::cout << "Error: GLEW is not OK" << std::endl;
+        std::cerr << "Error: GLEW initialization failed!" << std::endl;
         return -2;
     }
 
@@ -39,9 +43,9 @@ int main(void)
     // Vertex positions for a square (two triangles)
     const float pos[] = {
         -0.5f, -0.5f,  // Vertex 0 (bottom-left)
-         0.5f, -0.5f,   // Vertex 1 (bottom-right)
-         0.5f,  0.5f,    // Vertex 2 (top-right)
-        -0.5f,  0.5f    // Vertex 3 (top-left)
+        0.5f, -0.5f,   // Vertex 1 (bottom-right)
+        0.5f, 0.5f,    // Vertex 2 (top-right)
+        -0.5f, 0.5f    // Vertex 3 (top-left)
     };
 
     // Indices defining two triangles using the vertices
@@ -50,16 +54,16 @@ int main(void)
         2, 3, 0   // Indices for second triangle
     };
 
-    // Size of the vertex positions array
+    uint32 VAO;
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
+
+    // Calculate the size of the vertex positions array
     constexpr auto size_of_pos = sizeof(pos);
-    // Size of the indices array
-    constexpr auto size_of_indicies = sizeof(indices);
-    // Total number of indices in the array
-    constexpr auto number_of_indicies = sizeof(indices) / sizeof(indices[0]);
-    // Total number of triangles
-    //constexpr auto number_of_tries = 2;
-    // Number of vertices per triangle
-    //constexpr auto number_of_vertex = size_of_pos / sizeof(float) / number_of_tries;
+    // Calculate the size of the indices array
+    constexpr auto size_of_indices = sizeof(indices);
+    // Calculate the total number of indices in the array
+    constexpr auto number_of_indices = sizeof(indices) / sizeof(indices[0]);
 
     // Generate and bind a buffer for vertex data (VBO)
     uint32 buffer;
@@ -75,36 +79,36 @@ int main(void)
     uint32 index_buffer_object;
     glGenBuffers(1, &index_buffer_object);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_object);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size_of_indicies, indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size_of_indices, indices, GL_STATIC_DRAW);
 
     // Parse the shader from a file
     const ShaderSourceProgram Source = ParseShader("Application/Resources/Shaders/Test.shader");
 
-    // Create a shader program from vertex and pixel shaders
+    // Create a shader program from vertex and fragment shaders
     const uint32 Shader = CreateShader(Source.VertexShader, Source.PixelShader);
     glUseProgram(Shader);  // Use the created shader program
 
-    /* Main render loop: this loop continues until the user closes the window */
+    // Main render loop: continues until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
-        /* Clear the screen */
+        // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUniform1f(glGetUniformLocation(Shader, "time"), glfwGetTime());
 
-        /* Render the elements using indices, defined as triangles */
-        glDrawElements(GL_TRIANGLES, number_of_indicies, GL_UNSIGNED_INT, nullptr);
+        // Render the elements using indices, defined as triangles
+        glDrawElements(GL_TRIANGLES, number_of_indices, GL_UNSIGNED_INT, nullptr);
 
-        /* Swap front and back buffers (double-buffering) */
+        // Swap front and back buffers (double-buffering)
         glfwSwapBuffers(window);
 
-        /* Poll for and process events (keyboard, mouse, etc.) */
+        // Poll for and process events (keyboard, mouse, etc.)
         glfwPollEvents();
     }
 
-    /* Terminate GLFW and clean up */
+    // Terminate GLFW and clean up
     glfwTerminate();
-    MemoryInfo memInfo = getMemoryInfo();
+    MemoryInfo& memInfo = getMemoryInfo();
     std::cout << "Total allocated memory: " << memInfo.totalAllocated << " bytes" << std::endl;
     std::cout << "Total freed memory: " << memInfo.totalFreed << " bytes" << std::endl;
     std::cout << "Used memory: " << memInfo.getUsedMemory() << " bytes" << std::endl;
