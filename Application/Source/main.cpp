@@ -34,6 +34,8 @@ int main(void)
     glViewport(0, 0, 1920, 1080);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    InputManager IM(window);
+
     // Disable vertical sync (0 to avoid limiting frame rate)
     glfwSwapInterval(0);
 
@@ -101,7 +103,7 @@ int main(void)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load and generate the texture
     int width, height, nrChannels;
-    unsigned char* data = stbi_load("Application/Resources/Textures/container.jpg", &width, &height, &nrChannels, 0);
+    unsigned char* data = stbi_load("Application/Resources/Textures/wall.jpg", &width, &height, &nrChannels, 0);
     if (data)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -112,15 +114,11 @@ int main(void)
         std::cerr << "Failed to load texture" << std::endl;
     }
 
-
+    InputManager::GetInputManager()->SubscribeToKey<int, GLFWwindow*>(GLFW_KEY_F, ChangePolygonMode);
     //Main render loop: continues until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
-
-        int mode = ChangePolygonMode(window);
-        glPolygonMode(GL_FRONT_AND_BACK, mode);
-
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -133,7 +131,9 @@ int main(void)
         glfwSwapBuffers(window);
 
         // Poll for and process events (keyboard, mouse, etc.)
-        glfwPollEvents();
+        //glfwPollEvents();
+
+        IM.PollEvents();
     }
 
     // Terminate GLFW and clean up
