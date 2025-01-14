@@ -1,73 +1,81 @@
 #pragma once
 
-#include "stb_image.h"
-
 #include <GL/glew.h>
 #include <string>
-#include <iostream>
+#include "stb_image.h"
 
 class Texture
 {
 public:
     // Constructor
-    Texture(const std::string& path)
-    {
-        glGenTextures(1, &textureID);
-        glBindTexture(GL_TEXTURE_2D, textureID);
-
-        // Set texture wrapping and filtering options
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        // Load image
-        unsigned char* data = LoadImage(path, &width, &height, &nrChannels);
-        if (data)
-        {
-            GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
-            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-            glGenerateMipmap(GL_TEXTURE_2D);
-            std::cout << "Texture loaded: " << path << std::endl;
-        }
-        else
-        {
-            std::cerr << "Failed to load texture: " << path << std::endl;
-        }
-
-        // Free image memory
-        FreeImage(data);
-    }
+    // This constructor initializes the texture by loading an image from the specified file path,
+    // generating an OpenGL texture, and setting up texture parameters.
+    //
+    // Parameters:
+    // - path: The file path to the image to be loaded as a texture.
+    Texture(const std::string& path);
 
     // Destructor
-    ~Texture() { glDeleteTextures(1, &textureID); }
+    // This destructor cleans up resources by deleting the OpenGL texture when the Texture object goes out of scope.
+    ~Texture();
 
     // Bind the texture
-    void Bind() const { glBindTexture(GL_TEXTURE_2D, textureID); }
+    // This method binds the texture, making it the current active texture used for rendering.
+    void Bind() const;
 
     // Unbind the texture
-    void Unbind() const { glBindTexture(GL_TEXTURE_2D, 0); }
+    // This method unbinds the texture, making it inactive.
+    void Unbind() const;
+
+    // Getter for texture ID
+    // This inline method returns the OpenGL ID of the texture.
+    //
+    // Returns:
+    // - The unique ID of the texture as a GLuint.
+    inline const GLuint GetTextureID() const { return TextureID; }
+
+    // Getter for width
+    // This inline method returns the width of the texture in pixels.
+    //
+    // Returns:
+    // - The width of the texture as an integer.
+    inline const int GetWidth() const { return width; }
+
+    // Getter for height
+    // This inline method returns the height of the texture in pixels.
+    //
+    // Returns:
+    // - The height of the texture as an integer.
+    inline const int GetHeight() const { return height; }
+
+    // Getter for number of channels
+    // This inline method returns the number of color channels in the texture.
+    //
+    // Returns:
+    // - The number of color channels as an integer.
+    inline const int GetChannelsNumber() const { return nrChannels; }
 
 private:
-    GLuint textureID;
-    int width, height, nrChannels;
+    GLuint TextureID;               // OpenGL ID for the texture
+    int width, height, nrChannels;  // Width, height, and number of channels of the texture
 
     // Function to load image using your preferred image loading library (e.g., stb_image)
-    unsigned char* LoadImage(const std::string& path, int* width, int* height, int* nrChannels)
-    {
-        // Use your preferred image loading library here
-        // For example, stb_image.h
-        // unsigned char* data = stbi_load(path.c_str(), width, height, nrChannels, 0);
-        // return data;
-        return stbi_load(path.c_str(), width, height, nrChannels, 0);
-    }
+    // This private method loads an image from the specified file path using stb_image or another image loading library.
+    //
+    // Parameters:
+    // - path: The file path to the image to be loaded.
+    // - width: Pointer to an integer where the width of the loaded image will be stored.
+    // - height: Pointer to an integer where the height of the loaded image will be stored.
+    // - nrChannels: Pointer to an integer where the number of color channels will be stored.
+    //
+    // Returns:
+    // - A pointer to the loaded image data.
+    unsigned char* LoadImage(const std::string& path, int* width, int* height, int* nrChannels);
 
     // Function to free image memory
-    void FreeImage(unsigned char* data)
-    {
-        // Use your preferred image loading library here
-        // For example, stb_image.h
-        // stbi_image_free(data);
-        stbi_image_free(data);
-    }
+    // This private method frees the memory used by the loaded image data.
+    //
+    // Parameters:
+    // - data: Pointer to the image data to be freed.
+    void FreeImage(unsigned char* data);
 };
