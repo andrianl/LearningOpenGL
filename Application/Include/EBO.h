@@ -9,19 +9,19 @@ class ElementBufferObject
 public:
     // Constructor
     // This constructor generates a buffer ID for the Element Buffer Object (EBO) using OpenGL.
-    ElementBufferObject() { glGenBuffers(1, &BufferID); }
+    ElementBufferObject();
 
     // Destructor
     // This destructor deletes the EBO by its buffer ID to free up resources when the object goes out of scope.
-    ~ElementBufferObject() { glDeleteBuffers(1, &BufferID); }
+    ~ElementBufferObject();
 
     // Bind the EBO
     // This method binds the EBO, making it the current buffer for the target GL_ELEMENT_ARRAY_BUFFER.
-    void Bind() const { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, BufferID); }
+    void Bind() const;
 
     // Unbind the EBO
     // This method unbinds the EBO by binding the buffer to 0 for the target GL_ELEMENT_ARRAY_BUFFER.
-    void Unbind() const { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); }
+    void Unbind() const;
 
     // Upload data to the EBO from const void*
     // This method uploads data to the EBO for the target GL_ELEMENT_ARRAY_BUFFER using raw pointers.

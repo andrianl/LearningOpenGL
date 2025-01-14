@@ -1,5 +1,12 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include <Core.h>
+#include "Core.h"
+#include "Shaders.h"
+#include "Texture.h"
+#include "Input.h"
+#include "EBO.h"
+#include "VAO.h"
+#include "VBO.h"
+#include "Window.h"
 
 int main(void)
 {
@@ -42,7 +49,7 @@ int main(void)
     // Print the version of OpenGL in use
     std::cout << glGetString(GL_VERSION) << std::endl;
 
-// Vertex positions (2D) and texture coordinates (interleaved)
+    // Vertex positions (2D) and texture coordinates (interleaved)
     const float vertices[] = {
         // Position           // Texture Coordinates
         -0.5f, -0.5f, 0.0f, 0.0f,  // Vertex 0 (bottom-left)
@@ -52,15 +59,14 @@ int main(void)
     };
 
     // Indices defining two triangles using the vertices
-    const uint32 indices[] = {
+    const GLuint indices[] = {
         0, 1, 2,  // Indices for first triangle
         2, 3, 0   // Indices for second triangle
     };
 
-
-    uint32 VAO;
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
+    // Initialize VAO
+    VertexArrayObject vao;
+    vao.Bind();
 
     // Calculate the size of the vertex positions array
     constexpr auto size_of_pos = sizeof(vertices);
@@ -69,38 +75,37 @@ int main(void)
     // Calculate the total number of indices in the array
     constexpr auto number_of_indices = sizeof(indices) / sizeof(indices[0]);
 
-    // Generate and bind a buffer for vertex data (VBO)
-    uint32 buffer;
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, size_of_pos, vertices, GL_STATIC_DRAW);
+    // Initialize and bind VBO
+    VertexBufferObject vbo;
+    vbo.Bind();
+    vbo.UploadData(GL_ARRAY_BUFFER, size_of_pos, vertices, GL_STATIC_DRAW);
 
     // Position attribute (2D positions)
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);  // 2D position
-    glEnableVertexAttribArray(0);
+    vao.EnableAttribute(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);  // 2D position
 
     // Texture coordinate attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));  // Texture coordinates
-    glEnableVertexAttribArray(1);
+    vao.EnableAttribute(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));  // Texture coordinates
 
-    // Generate and bind a buffer for element indices (EBO or IBO)
-    uint32 index_buffer_object;
-    glGenBuffers(1, &index_buffer_object);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_object);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size_of_indices, indices, GL_STATIC_DRAW);
+    // Initialize and bind EBO
+    ElementBufferObject ebo;
+    ebo.Bind();
+    ebo.UploadData(size_of_indices, indices);
 
-    const Shader Gradient("Application/Resources/Shaders/TestTexture.shader");
+    // Initialize Shader
+    Shader Gradient("Application/Resources/Shaders/TestTexture.shader");
+    Gradient.Bind();
 
-    Gradient.Use();
-
+    // Initialize Texture
     Texture WallTexture("Application/Resources/Textures/wall.jpg");
     WallTexture.Bind();
 
     InputManager::GetInputManager()->SubscribeToKey<int, GLFWwindow*>(GLFW_KEY_F, ChangePolygonMode);
-    //Main render loop: continues until the user closes the window
+
+    // Main render loop: continues until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
+
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -113,7 +118,6 @@ int main(void)
         glfwSwapBuffers(window);
 
         // Poll for and process events (keyboard, mouse, etc.)
-        //glfwPollEvents();
         IM.PollEvents();
     }
 

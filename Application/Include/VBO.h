@@ -9,11 +9,11 @@ class VertexBufferObject
 public:
     // Constructor
     // This constructor generates a buffer ID for the Vertex Buffer Object (VBO) using OpenGL.
-    VertexBufferObject() { glGenBuffers(1, &BufferID); }
+    VertexBufferObject();
 
     // Destructor
     // This destructor deletes the VBO by its buffer ID to free up resources when the object goes out of scope.
-    ~VertexBufferObject() { glDeleteBuffers(1, &BufferID); }
+    ~VertexBufferObject();
 
     // Bind the VBO
     // This method binds the VBO, making it the current buffer for the specified target (default is GL_ARRAY_BUFFER).

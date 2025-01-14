@@ -199,3 +199,4 @@ obj/
 Intermediate/
 *.cmd
 *.i
+/Application_project_suppressions.cfg

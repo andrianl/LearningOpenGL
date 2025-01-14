@@ -1,10 +1,4 @@
-#include <GL/glew.h>     // Include GLEW to manage OpenGL extensions
-#include <GLFW/glfw3.h>  // Include GLFW for window creation and management
-
-#include "Window.h"
-#include "Input.h"
-#include "Shaders.h"  // Custom header for shader-related functions
-#include "Texture.h"
+#pragma once
 
 #include <iostream>
 #include <new>

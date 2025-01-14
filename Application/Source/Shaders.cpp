@@ -1,9 +1,9 @@
 #include "Shaders.h"
 #include "GL/glew.h"
-#include <string>
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <Platform.h>
 
 Shader::Shader(const std::string& filepath) 
 {

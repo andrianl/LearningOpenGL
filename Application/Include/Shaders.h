@@ -1,7 +1,7 @@
 #pragma once
 
+#include <GL/glew.h>
 #include <string>
-#include <Platform.h>
 
 // Struct to hold the vertex and pixel shader source code
 struct ShaderSourceProgram
@@ -45,7 +45,7 @@ public:
     //
     // Returns:
     // - The unique ID of the shader program as a GLuint.
-    GLuint GetShaderID() const { return ShaderID; }
+    inline const GLuint GetShaderID() const { return ShaderID; }
 
 private:
     // Parses the shader source file and extracts vertex and pixel shader code
