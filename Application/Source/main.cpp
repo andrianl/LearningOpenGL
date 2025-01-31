@@ -50,36 +50,30 @@ int main(void)
     std::cout << glGetString(GL_VERSION) << std::endl;
 
     // Vertex positions (2D) and texture coordinates (interleaved)
-    const float vertices[] = {
-        // Position           // Texture Coordinates
-        -0.5f, -0.5f, 0.0f, 0.0f,  // Vertex 0 (bottom-left)
-        0.5f, -0.5f, 1.0f, 0.0f,   // Vertex 1 (bottom-right)
-        0.5f, 0.5f, 1.0f, 1.0f,    // Vertex 2 (top-right)
-        -0.5f, 0.5f, 0.0f, 1.0f    // Vertex 3 (top-left)
+    // Створюємо масив вершин за допомогою std::array
+    std::array<Vertex2DUV, 4> vertices = {
+        Vertex2DUV({glm::vec2(-0.5f, -0.5f), glm::vec2(0.0f, 0.0f)}),  // Vertex 0 (bottom-left)
+        Vertex2DUV({glm::vec2(0.5f, -0.5f), glm::vec2(1.0f, 0.0f)}),   // Vertex 1 (bottom-right)
+        Vertex2DUV({glm::vec2(0.5f, 0.5f), glm::vec2(1.0f, 1.0f)}),    // Vertex 2 (top-right)
+        Vertex2DUV({glm::vec2(-0.5f, 0.5f), glm::vec2(0.0f, 1.0f)})    // Vertex 3 (top-left)
     };
 
-    // Indices defining two triangles using the vertices
-    const GLuint indices[] = {
-        0, 1, 2,  // Indices for first triangle
-        2, 3, 0   // Indices for second triangle
+    std::array<GLuint, 6> indices = {
+        0, 1, 2,  // First Triangle
+        2, 3, 0   // Second Triangle
     };
+    
 
     // Initialize VAO
     GlobalVAO& GVAO = GlobalVAO::GetInstance();
     VertexArrayObject vao;
     vao.Bind();
 
-    // Calculate the size of the vertex positions array
-    constexpr auto size_of_pos = sizeof(vertices);
-    // Calculate the size of the indices array
-    constexpr auto size_of_indices = sizeof(indices);
-    // Calculate the total number of indices in the array
-    constexpr auto number_of_indices = sizeof(indices) / sizeof(indices[0]);
-
     // Initialize and bind VBO
     VertexBufferObject vbo;
     vbo.Bind();
-    vbo.UploadData(GL_ARRAY_BUFFER, size_of_pos, vertices, GL_STATIC_DRAW);
+
+    vbo.UploadData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertices.data()[0]), vertices.data(), GL_STATIC_DRAW);
 
     // Position attribute (2D positions)
     vao.EnableAttribute(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);  // 2D position
@@ -90,7 +84,7 @@ int main(void)
     // Initialize and bind EBO
     ElementBufferObject ebo;
     ebo.Bind();
-    ebo.UploadData(size_of_indices, indices);
+    ebo.UploadData(indices.size() * sizeof(indices.data()[0]), indices.data());
 
     // Initialize Shader
     //Shader Gradient("Application/Resources/Shaders/Test.shader");
@@ -103,8 +97,6 @@ int main(void)
     Texture WallTexture("../Application/Resources/Textures/wall.jpg");
     WallTexture.Bind();
 
-    //InputManager::GetInputManager()->SubscribeToKey<int, GLFWwindow*>(GLFW_KEY_F, ChangePolygonMode);
-
     // Main render loop: continues until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
@@ -116,7 +108,7 @@ int main(void)
         glUniform1f(glGetUniformLocation(Gradient.GetShaderID(), "time"), static_cast<GLfloat>(glfwGetTime()));
 
         // Render the elements using indices, defined as triangles
-        glDrawElements(GL_TRIANGLES, number_of_indices, GL_UNSIGNED_INT, nullptr);
+        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
 
         // Swap front and back buffers (double-buffering)
         glfwSwapBuffers(window);

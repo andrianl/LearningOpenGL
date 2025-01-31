@@ -14,13 +14,17 @@ workspace (path.getbasename(os.getcwd())) -- Get the current working directory a
         platforms { "Linux" }
     end
     
-    toolset "clang"  -- Встановлюємо Clang як інструментарій компіляції
-
+    toolset "clang"  -- Встановлюємо Clang як інструментарій 
+    
     require("premake-vscode")
 
     location (projectFilesDir)
     startproject "Application" -- Set the default startup project
     defines { "GLEW_STATIC" } -- Preprocessor definitions for all projects
+
+
+    filter { "toolset:clang" }
+        defines { "CLANG" }
 
     filter { "platforms:Win32" }
         system "Windows"

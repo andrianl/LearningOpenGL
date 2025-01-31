@@ -57,7 +57,7 @@ private:
 };
 
 template <typename ReturnType, typename... Args>
-inline void InputManager::SubscribeToKey(int key, std::function<ReturnType(Args...)> func)
+void InputManager::SubscribeToKey(int key, std::function<ReturnType(Args...)> func)
 {
-    keyDelegates[key].AddDynamic(func);
+    keyDelegates[key].AddDynamic([func]() { func(static_cast<Args>(nullptr)...); });
 }
