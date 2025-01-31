@@ -3,7 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
-#include <Platform.h>
+#include "Platform.h"
 
 Shader::Shader(const std::string& filepath) 
 {

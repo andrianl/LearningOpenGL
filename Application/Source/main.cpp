@@ -7,18 +7,18 @@
 #include "VAO.h"
 #include "VBO.h"
 #include "Window.h"
+#include <Vertex.h>
 
 int main(void)
 {
+
     MemoryInfo& memInfo = getMemoryInfo();
     GLFWwindow* window;
 
     // Initialize the GLFW library
     if (!glfwInit()) return -1;  // Return if initialization failed
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    OpenGLVersionInit(4, 6);
 
     // Create a windowed mode window and its OpenGL context
     window = glfwCreateWindow(1920, 1080, "Learn OpenGL", NULL, NULL);
@@ -65,6 +65,7 @@ int main(void)
     };
 
     // Initialize VAO
+    GlobalVAO& GVAO = GlobalVAO::GetInstance();
     VertexArrayObject vao;
     vao.Bind();
 
@@ -92,14 +93,17 @@ int main(void)
     ebo.UploadData(size_of_indices, indices);
 
     // Initialize Shader
-    Shader Gradient("Application/Resources/Shaders/TestTexture.shader");
+    //Shader Gradient("Application/Resources/Shaders/Test.shader");
+
+    Shader Gradient("../Application/Resources/Shaders/Test.shader");
+
     Gradient.Bind();
 
     // Initialize Texture
-    Texture WallTexture("Application/Resources/Textures/wall.jpg");
+    Texture WallTexture("../Application/Resources/Textures/wall.jpg");
     WallTexture.Bind();
 
-    InputManager::GetInputManager()->SubscribeToKey<int, GLFWwindow*>(GLFW_KEY_F, ChangePolygonMode);
+    //InputManager::GetInputManager()->SubscribeToKey<int, GLFWwindow*>(GLFW_KEY_F, ChangePolygonMode);
 
     // Main render loop: continues until the user closes the window
     while (!glfwWindowShouldClose(window))

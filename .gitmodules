@@ -1,11 +1,11 @@
 [submodule "glfw"]
-	path = GLFW
+	path = ThirdParty/GLFW
 	url = https://github.com/glfw/glfw.git
 
 [submodule "glew"]
-	path = GLEW
+	path = ThirdParty/GLEW
 	url = https://github.com/omniavinco/glew-cmake
 
 [submodule "glm"]
-	path = GLM
+	path = ThirdParty/glm
 	url = https://github.com/g-truc/glm

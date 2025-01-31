@@ -1,202 +1,113 @@
-# Ігнорувати всі бінарні файли
-*.exe
-*.dll
-*.so
-*.dylib
-*.o
-*.a
-*.lib
-*.bin
-*.lbin
-*.elf
-*.class
-*.jar
-*.war
-*.ear
-*.pyc
-*.pyo
-*.pyd
-*.pdb
-*.msi
-*.exe~
-*.dll~
-*.so~
-*.dylib~
-*.o~
-*.a~
-*.lib~
-*.bin~
-*.lbin~
-*.elf~
-*.class~
-*.jar~
-*.war~
-*.ear~
-*.pyc~
-*.pyo~
-*.pyd~
-*.pdb~
-*.msi~
-*.out
+# Ігнорувати всі файли в папках Build, Intermediate та ProjectFiles
+Build/
+Intermediate/
+ProjectFiles/
+premake-vscode/
 
-# Ігнорувати файли системи
+# Додаткові глобальні ігнорування (на всяк випадок)
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Ігнорування файлів конфігурації IDE
+.vscode/
+.vs/
+.idea/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+
+# Ігнорування файлів операційної системи
 .DS_Store
 Thumbs.db
-ehthumbs.db
-Icon?
-*.swp
-*.swo
-*~
-._*
-.Spotlight-V100
-.Trashes
 
-# Ігнорувати файли тимчасових даних
-*.un~
-Session.vim
+# Prerequisites
+*.d
 
-# Ігнорувати файли проектів Visual Studio
-*.vcxproj
-*.vcxproj.user
-*.vcxproj.filters
-*.sln
-*.user
-*.ncb
-*.suo
-*.htm
-*.html
-*.log
-*.tlog
-*.tmp
-*.rsuser
-*.rscache
-*.opensdf
-*.sdf
-*.ilk
-*.idb
-*.pdb
-*.pgc
-*.pgd
-*.rsp
-*.sbr
-*.aps
-*.pch
-*.obj
-*.tlb
-*.tli
-*.tlh
-*.ipch
-*.iobj
-*.ipdb
-*.pgc
-*.pgd
+# Compiled Object files
+*.slo
+*.lo
 *.o
 *.obj
-*.lo
-*.la
-*.al
-*.libs
-*.dll
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
 *.so
 *.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
 *.exe
 *.out
 *.app
-*.prl
-*.dSYM
 
-# Ігнорувати теки та файли проектів
-.vs/
-.idea/
-.vscode/
-node_modules/
-__pycache__/
-coverage/
-build/
-dist/
-target/
-*.iml
-*.ipr
-*.iws
+# Object files
+*.os
+*.ko
+*.elf
 
-# Ігнорувати файли резервних копій та тимчасові файли
-*.bak
-*.old
-*.orig
-*.rej
-*.save
-*.swm
-*.tmp
+# Linker output
+*.ilk
+*.map
+*.exp
 
-# Ігнорувати файли, що використовуються у LaTeX
-*.aux
-*.bbl
-*.blg
-*.brf
-*.cb
-*.cbl
-*.cbm
-*.drv
-*.dvi
-*.ent
-*.fdb_latexmk
-*.fls
-*.glo
-*.idx
-*.ilg
-*.ind
-*.ist
-*.lof
-*.lot
-*.maf
-*.mtc
-*.mtc0
-*.nav
-*.out
-*.pre
-*.sbl
-*.srs
-*.synctex.gz
-*.toc
-*.xdv
+# Libraries
+*.def
+*.exp
 
-# Ігнорувати файли з різними розширеннями та файли проектів VCS
-*.acr
-*.alg
-*.glg
-*.gls
-*.glsdefs
-*.ist
-*.soc
-*.run.xml
-*.svn
-*.git
-*.hg
-*.bzr
+# Shared objects (inc. Windows DLLs)
+*.so.*
+*.i*86
+*.x86_64
+*.hex
 
-# Ігнорувати файли баз даних
-*.lock
-*.db
-*.sqlite
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
 
-# Ігнорувати файли, що містять зразок .gitignore
-.*
-
-# Винятки
-!.gitignore
-!.clang-format
-
-# Ігнорувати файли створені make
-*.make
-
-# Ігнорувати файли PVS Studio
-*.pvslog
-*.pvsconfig
-
-Build/
-ProjectFiles/
-obj/
-Intermediate/
+# Kernel Module Compile Results
+*.mod*
 *.cmd
-*.i
-/Application_project_suppressions.cfg
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+# CMake build files
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+CMakeUserPresets.json
+
+# Compiled Lua sources
+luac.out
+
+# luarocks build files
+*.src.rock
+*.zip
+*.tar.gz
