@@ -5,21 +5,18 @@
 #include "GL/glew.h"
 #include "glm/glm.hpp"
 
-#ifdef _WIN64
 #ifdef _MSC_VER
 #include <cstddef>
 #define OFFSET_OF(s, m) offsetof(s, m)
-#else
+#elif defined(__clang__) || defined(CLANG)
+#define OFFSET_OF(s, m) (size_t) & reinterpret_cast<const volatile char&>((((s*)0)->m))
+#elif defined(_WIN64)
 #define OFFSET_OF(s, m) (size_t)((ptrdiff_t) & reinterpret_cast<const volatile char&>((((s*)0)->m)))
-#endif
-#else
-#ifdef __clang__ || defined(CLANG)
-#define OFFSET_OF(s, m) (size_t)&reinterpret_cast<const volatile char&>((((s*)0)->m)
 #else
 #include <cstddef>
 #define OFFSET_OF(s, m) offsetof(s, m)
 #endif
-#endif
+
 
 //==============================================================================
 // 1. Template class Vertex
