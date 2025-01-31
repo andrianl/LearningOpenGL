@@ -127,7 +127,7 @@ int main(void)
         vao.Unbind();
 
         // Swap buffers and poll events
-        glfwSwapBuffers();
+        glfwSwapBuffers(window);
     }
 
     // ----------------------------
