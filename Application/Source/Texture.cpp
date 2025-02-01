@@ -1,7 +1,8 @@
 #include "Texture.h"
-
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include <iostream>
+#include <Shaders.h>
 
 Texture::Texture(const std::string& path)
 {
@@ -14,6 +15,7 @@ Texture::Texture(const std::string& path)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    stbi_set_flip_vertically_on_load(true);
     // Load image
     unsigned char* data = LoadImage(path, &width, &height, &nrChannels);
     if (data)
@@ -62,4 +64,28 @@ void Texture::FreeImage(unsigned char* data)
     // For example, stb_image.h
     // stbi_image_free(data);
     stbi_image_free(data);
+}
+
+void Texture::BindTextureToShader(GLuint unit, const Shader& shader, std::string_view uniformName) const
+{
+    // Отримуємо максимальну кількість текстурних блоків.
+    static GLint maxTextureUnits = 0;
+    if (maxTextureUnits == 0) {
+        glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxTextureUnits);
+    }
+
+    // Перевірка на допустимість текстурного блоку.
+    if (unit >= static_cast<GLuint>(maxTextureUnits)) {
+        std::cerr << "Error: Texture unit exceeds the maximum supported texture units (" << maxTextureUnits << ")." << std::endl;
+        return;
+    }
+
+    // Activate the specified texture unit.
+    glActiveTexture(GL_TEXTURE0 + unit);
+
+    // Bind the texture to the current active texture unit.
+    Bind();
+
+    // Set the sampler uniform in the shader to use the specified texture unit.
+    shader.SetInt(uniformName, static_cast<int>(unit));
 }

@@ -20,6 +20,15 @@ std::vector<VertexAttrib> VertexLayout<VertexPosUV2D>::GetAttributes()
         {1, 2, GL_FLOAT, sizeof(VertexPosUV2D), OFFSET_OF(VertexPosUV2D, uv), GL_FALSE}};
 }
 
+// Specialization for VertexPosUV3D
+std::vector<VertexAttrib> VertexLayout<VertexPosUV3D>::GetAttributes()
+{
+    return {// Position: location 0, 2 components (vec2)
+        {0, 3, GL_FLOAT, sizeof(VertexPosUV3D), OFFSET_OF(VertexPosUV3D, pos), GL_FALSE},
+        // UV coordinates: location 1, 2 components (vec2)
+        {1, 2, GL_FLOAT, sizeof(VertexPosUV3D), OFFSET_OF(VertexPosUV3D, uv), GL_FALSE} };
+}
+
 // Specialization for VertexPosColorUV
 std::vector<VertexAttrib> VertexLayout<VertexPosColorUV>::GetAttributes()
 {

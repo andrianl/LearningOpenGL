@@ -1,30 +1,33 @@
 #include "Shaders.h"
-#include "GL/glew.h"
-#include <sstream>
 #include <iostream>
 #include <fstream>
-#include "Platform.h"
+#include <sstream>
 
-Shader::Shader(const std::string& filepath) 
+// ------------------------------------------------------------------------
+// Shader Constructor and Destructor
+// ------------------------------------------------------------------------
+
+Shader::Shader(std::string_view filepath)
 {
-    ShaderSourceProgram Source = ParseShader(filepath);
-    ShaderID = CreateShader(Source.VertexShader, Source.PixelShader);
+    // Parse the shader file to retrieve vertex and pixel shader source code
+    ShaderSourceProgram source = ParseShader(filepath.data());
+    // Create the shader program using the parsed source code
+    ShaderID = CreateShader(source.VertexShader, source.PixelShader);
 }
 
-Shader::~Shader() 
+Shader::~Shader()
 {
-    if (!ShaderID) return;
+    // Delete the shader program when the Shader object is destroyed
     glDeleteProgram(ShaderID);
 }
 
-void Shader::Bind() const
-{
-    glUseProgram(ShaderID);
-}
+// ------------------------------------------------------------------------
+// Shader Utility Functions
+// ------------------------------------------------------------------------
 
 ShaderSourceProgram Shader::ParseShader(const std::string& filepath)
 {
-    enum class ShaderType : int8
+    enum class ShaderType : int8_t
     {
         None = -1,
         Vertex = 0,
@@ -56,13 +59,37 @@ ShaderSourceProgram Shader::ParseShader(const std::string& filepath)
         }
         else if (currentType != ShaderType::None)
         {
-            ss[static_cast<int8>(currentType)] << line << '\n';
+            ss[static_cast<int8_t>(currentType)] << line << '\n';
         }
     }
 
     return {ss[0].str(), ss[1].str()};
 }
 
+GLuint Shader::CompileShader(const std::string& Source, GLuint Type)
+{
+    GLuint id = glCreateShader(Type);
+    const char* src = Source.c_str();
+    glShaderSource(id, 1, &src, nullptr);
+    glCompileShader(id);
+
+    // Error handling for shader compilation
+    GLint result;
+    glGetShaderiv(id, GL_COMPILE_STATUS, &result);
+    if (result == GL_FALSE)
+    {
+        GLint length;
+        glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
+        char* message = new char[length];
+        glGetShaderInfoLog(id, length, &length, message);
+        std::cerr << "Failed to compile shader!" << std::endl;
+        std::cerr << message << std::endl;
+        delete[] message;
+        glDeleteShader(id);
+        return 0;
+    }
+    return id;
+}
 
 GLuint Shader::CreateShader(const std::string& VertexShader, const std::string& PixelShader)
 {
@@ -84,6 +111,7 @@ GLuint Shader::CreateShader(const std::string& VertexShader, const std::string& 
         glGetProgramInfoLog(Program, length, &length, message);
         std::cerr << "Failed to link shader program!" << std::endl;
         std::cerr << message << std::endl;
+        delete[] message;
         glDeleteProgram(Program);
         return 0;
     }
@@ -102,31 +130,76 @@ GLuint Shader::CreateShader(const std::string& VertexShader, const std::string& 
     return Program;
 }
 
-GLuint Shader::CompileShader(const std::string& Source, GLuint Type)
+void Shader::Bind() const
 {
-    GLuint id = glCreateShader(Type);
-    const char* source = Source.c_str();
-    glShaderSource(id, 1, &source, nullptr);
-    glCompileShader(id);
+    glUseProgram(ShaderID);
+}
 
+// ------------------------------------------------------------------------
+// Uniform Setter Functions Implementation
+// ------------------------------------------------------------------------
 
-    GLint CompileResult;
-    glGetShaderiv(id, GL_COMPILE_STATUS, &CompileResult);
+GLint Shader::GetUniformLocation(std::string_view name) const
+{
+    return glGetUniformLocation(ShaderID, name.data());
+}
 
-    if (CompileResult == GL_FALSE)
-    {
-        GLint length;
-        glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
-        char* message = (char*)_malloca(length * sizeof(char));
-        glGetShaderInfoLog(id, length, &length, message);
+void Shader::SetBool(std::string_view name, bool value) const
+{
+    glUniform1i(glGetUniformLocation(ShaderID, name.data()), static_cast<int>(value));
+}
 
-        const char* shaderType = Type == GL_VERTEX_SHADER ? "vertex" : "pixel";
-        std::cerr << "Failed to compile " << shaderType << " shader!" << std::endl;
-        std::cerr << message << std::endl;
+void Shader::SetInt(std::string_view name, int value) const
+{
+    glUniform1i(glGetUniformLocation(ShaderID, name.data()), value);
+}
 
-        glDeleteShader(id);
-        return 0;
-    }
+void Shader::SetFloat(std::string_view name, float value) const
+{
+    glUniform1f(glGetUniformLocation(ShaderID, name.data()), value);
+}
 
-    return id;
+void Shader::SetVec2(std::string_view name, const glm::vec2& value) const
+{
+    glUniform2fv(glGetUniformLocation(ShaderID, name.data()), 1, &value[0]);
+}
+
+void Shader::SetVec2(std::string_view name, float x, float y) const
+{
+    glUniform2f(glGetUniformLocation(ShaderID, name.data()), x, y);
+}
+
+void Shader::SetVec3(std::string_view name, const glm::vec3& value) const
+{
+    glUniform3fv(glGetUniformLocation(ShaderID, name.data()), 1, &value[0]);
+}
+
+void Shader::SetVec3(std::string_view name, float x, float y, float z) const
+{
+    glUniform3f(glGetUniformLocation(ShaderID, name.data()), x, y, z);
+}
+
+void Shader::SetVec4(std::string_view name, const glm::vec4& value) const
+{
+    glUniform4fv(glGetUniformLocation(ShaderID, name.data()), 1, &value[0]);
+}
+
+void Shader::SetVec4(std::string_view name, float x, float y, float z, float w) const
+{
+    glUniform4f(glGetUniformLocation(ShaderID, name.data()), x, y, z, w);
+}
+
+void Shader::SetMat2(std::string_view name, const glm::mat2& mat) const
+{
+    glUniformMatrix2fv(glGetUniformLocation(ShaderID, name.data()), 1, GL_FALSE, &mat[0][0]);
+}
+
+void Shader::SetMat3(std::string_view name, const glm::mat3& mat) const
+{
+    glUniformMatrix3fv(glGetUniformLocation(ShaderID, name.data()), 1, GL_FALSE, &mat[0][0]);
+}
+
+void Shader::SetMat4(std::string_view name, const glm::mat4& mat) const
+{
+    glUniformMatrix4fv(glGetUniformLocation(ShaderID, name.data()), 1, GL_FALSE, &mat[0][0]);
 }

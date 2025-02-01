@@ -64,6 +64,12 @@ struct VertexPosUV2D
     glm::vec2 uv;
 };
 
+struct VertexPosUV3D
+{
+    glm::vec3 pos;
+    glm::vec2 uv;
+};
+
 struct VertexPosColorUV
 {
     glm::vec2 pos;
@@ -141,6 +147,13 @@ struct VertexLayout<VertexPos2D>
 // Specialization for VertexPosUV2D
 template <>
 struct VertexLayout<VertexPosUV2D>
+{
+    static std::vector<VertexAttrib> GetAttributes();
+};
+
+// Specialization for VertexPosUV3D
+template <>
+struct VertexLayout<VertexPosUV3D>
 {
     static std::vector<VertexAttrib> GetAttributes();
 };

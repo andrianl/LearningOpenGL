@@ -1,8 +1,9 @@
 #pragma once
-
 #include <GL/glew.h>
 #include <string>
 #include "stb_image.h"
+
+class Shader;
 
 class Texture
 {
@@ -26,6 +27,19 @@ public:
     // Unbind the texture
     // This method unbinds the texture, making it inactive.
     void Unbind() const;
+
+    /**
+* @brief Binds a texture to a specific texture unit and sets the corresponding uniform in the shader.
+*
+* This function activates the specified texture unit, binds the given texture to it, and then updates
+* the shader's sampler uniform to point to that texture unit.
+*
+* @param texture The texture to be bound.
+* @param unit The texture unit index (e.g., 0 for GL_TEXTURE0, 1 for GL_TEXTURE1, etc.).
+* @param shader The shader program in which the uniform will be updated.
+* @param uniformName The name of the sampler uniform in the shader.
+*/
+    void BindTextureToShader(GLuint unit, const Shader& shader, std::string_view uniformName) const;
 
     // Getter for texture ID
     // This inline method returns the OpenGL ID of the texture.

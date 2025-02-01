@@ -1,4 +1,3 @@
-#define STB_IMAGE_IMPLEMENTATION
 #include "Core.h"     // Contains OpenGL version initialization, MemoryInfo, etc.
 #include "Window.h"   // Custom window wrapper class
 #include "Input.h"    // InputManager class
@@ -11,13 +10,17 @@
 
 #include <array>
 #include <iostream>
+#include "SSE.h"
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 int main(void)
 {
-    // Retrieve the global memory information structure
-    MemoryInfo& memInfo = getMemoryInfo();
+    float StartProgramTime = glfwGetTime();
 
-    // Initialize GLFW library
+    // Initialize GLFW
     if (!glfwInit())
     {
         std::cerr << "Failed to initialize GLFW." << std::endl;
@@ -27,8 +30,9 @@ int main(void)
     // Initialize OpenGL version (e.g., 4.6)
     OpenGLVersionInit(4, 6);
 
+    glfwWindowHint(GLFW_SAMPLES, 16); // 4x MSAA
     // Create a window using the custom Window class
-    GLFWwindow* window = glfwCreateWindow(1920, 1080, "Learn OpenGL", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(3840, 2160, "Learn OpenGL", nullptr, nullptr);
     if (!window)
     {
         glfwTerminate();
@@ -38,108 +42,151 @@ int main(void)
     // Make the window's context current
     glfwMakeContextCurrent(window);
 
-    // Initialize GLEW and verify success
+    // Initialize GLEW
     if (glewInit() != GLEW_OK)
     {
         std::cerr << "Error: GLEW initialization failed!" << std::endl;
         return -2;
     }
+    glEnable(GL_MULTISAMPLE);
 
     // Set the viewport size and register a framebuffer resize callback
-    glViewport(0, 0, 1920, 1080);
+    glViewport(0, 0, 3840, 2160);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    // Create an InputManager instance for handling input events
+    // Create an InputManager instance
     InputManager input(window);
 
-    // Disable vertical synchronization to allow unlimited frame rates
+    // Disable vertical synchronization
     glfwSwapInterval(0);
 
-    // Print the current OpenGL version
+    // Print OpenGL version and SSE level info
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl;
+    SSELevel sseLevel = GetSupportedSSELevel();
+    std::cout << "Supported SSE Level: " << SSELevelToString(sseLevel) << std::endl;
 
-    // Define vertex data using a std::array of Vertex2DUV.
-    // Each vertex contains a 2D position and a 2D texture coordinate.
-    std::array<Vertex2DUV, 4> vertices = {
-        Vertex2DUV({glm::vec2(-0.5f, -0.5f), glm::vec2(0.0f, 0.0f)}),  // Bottom-left
-        Vertex2DUV({glm::vec2(0.5f, -0.5f), glm::vec2(1.0f, 0.0f)}),   // Bottom-right
-        Vertex2DUV({glm::vec2(0.5f, 0.5f), glm::vec2(1.0f, 1.0f)}),    // Top-right
-        Vertex2DUV({glm::vec2(-0.5f, 0.5f), glm::vec2(0.0f, 1.0f)})    // Top-left
+    // Enable depth testing
+    glEnable(GL_DEPTH_TEST);
+
+    // ------------------------------------------------------------------------
+    // Vertex data for a cube (36 vertices, each with 5 floats: position (3) + texture coord (2))
+    // ------------------------------------------------------------------------
+
+// Вершини з UV координатами в одному масиві
+    std::array<float, 40> vertices = {
+        // positions         // texture coords (UV)
+        // Front face
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,  // bottom-left
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,  // top-left
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,  // top-right
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,  // bottom-right
+
+         // Back face
+          0.5f, -0.5f, -0.5f,  0.0f, 0.0f,  // back bottom-right
+          0.5f,  0.5f, -0.5f,  0.0f, 1.0f,  // back top-right
+         -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,  // back top-left
+         -0.5f, -0.5f, -0.5f,  1.0f, 0.0f   // back bottom-left
     };
 
-    // Define index data for two triangles forming a rectangle.
-    std::array<GLuint, 6> indices = {0, 1, 2, 2, 3, 0};
+    // Індекси в одному масиві
+    std::array<uint32_t, 36> indices = {
+        0, 1, 2,  2, 3, 0,  // Front
+        3, 2, 5,  5, 4, 3,  // Right
+        4, 5, 6,  6, 7, 4,  // Back
+        7, 6, 1,  1, 0, 7,  // Left
+        1, 6, 5,  5, 2, 1,  // Top
+        7, 0, 3,  3, 4, 7   // Bottom
+    };
 
-    // ----------------------------
-    // Setup Vertex Array, Buffer, and Element Buffer
-    // ----------------------------
 
-    // Create and bind a Vertex Array Object (VAO)
+
+
+    // ------------------------------------------------------------------------
+    // World space positions for the 10 cubes
+    // ------------------------------------------------------------------------
+    std::array<glm::vec3, 10> cubePositions = {
+        glm::vec3(0.0f,  0.0f,  0.0f),
+        glm::vec3(2.0f,  5.0f, -15.0f),
+        glm::vec3(-1.5f, -2.2f, -2.5f),
+        glm::vec3(-3.8f, -2.0f, -12.3f),
+        glm::vec3(2.4f, -0.4f, -3.5f),
+        glm::vec3(-1.7f,  3.0f, -7.5f),
+        glm::vec3(1.3f, -2.0f, -2.5f),
+        glm::vec3(1.5f,  2.0f, -2.5f),
+        glm::vec3(1.5f,  0.2f, -1.5f),
+        glm::vec3(-1.3f,  1.0f, -1.5f)
+    };
+
+    // ------------------------------------------------------------------------
+    // Setup Vertex Array Object (VAO), Vertex Buffer Object (VBO) and Element Buffer Object (EBO)
+    // ------------------------------------------------------------------------
     VertexArrayObject vao;
     vao.Bind();
 
-    // Create and bind a Vertex Buffer Object (VBO), then upload vertex data
     VertexBufferObject vbo;
     vbo.Bind();
     vbo.UploadData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW);
 
-    // Instead of manually specifying each attribute, use the template function
-    // which uses the VertexLayout specialization for VertexPosUV2D.
-    vao.EnableVertexAttributes<VertexPosUV2D>();
+    // Enable vertex attributes using the layout defined in VertexPosUV2D.
+    vao.EnableVertexAttributes<VertexPosUV3D>();
 
-    // Create and bind an Element Buffer Object (EBO), then upload index data
     ElementBufferObject ebo;
     ebo.Bind();
     ebo.UploadData(indices.size() * sizeof(GLuint), indices.data());
 
-    // Unbind the VAO (optional, for safety)
     vao.Unbind();
 
-    // ----------------------------
+    // ------------------------------------------------------------------------
     // Setup Shader and Texture
-    // ----------------------------
+    // ------------------------------------------------------------------------
+    Shader shader("../Application/Resources/Shaders/TestTexture.shader");
+    Texture wallTexture("../Application/Resources/Textures/awesomeface.png");
 
-    // Initialize the shader program from file and bind it for use
-    Shader shader("../Application/Resources/Shaders/Test.shader");
+    // Create view and projection matrices
+    glm::mat4 view = glm::mat4(1.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 3840.f / 2160.f, 0.1f, 100.0f);
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
     shader.Bind();
+    shader.SetMat4("projection", projection);
+    shader.SetMat4("view", view);
 
-    // Initialize and bind the texture
-    Texture wallTexture("../Application/Resources/Textures/wall.jpg");
-    wallTexture.Bind();
+    // Bind the texture to texture unit 0 and update the shader uniform
+    wallTexture.BindTextureToShader(0, shader, "ourTexture");
 
-    // ----------------------------
+    // ------------------------------------------------------------------------
     // Main Render Loop
-    // ----------------------------
+    // ------------------------------------------------------------------------
+    glm::vec4 ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     while (!glfwWindowShouldClose(window))
     {
-        // Process input (keyboard, mouse, etc.)
+        float StartOfFrameTime = glfwGetTime();
         processInput(window);
         glfwPollEvents();
-        // Clear the screen with the default clear color
-        glClear(GL_COLOR_BUFFER_BIT);
 
-        // Update shader uniform "time" with the current time value
-        glUniform1f(glGetUniformLocation(shader.GetShaderID(), "time"), static_cast<GLfloat>(glfwGetTime()));
+        glClearColor(ClearColor.r, ClearColor.g, ClearColor.b, ClearColor.a);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Bind the VAO and draw the elements as triangles
         vao.Bind();
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
-        vao.Unbind();
 
-        // Swap buffers and poll events
+        // Для кожного куба встановлюємо модельну матрицю і малюємо куб через glDrawElements
+        for (const auto& cube : cubePositions)
+        {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, cube);
+            float angle = 10.0f + ((std::sin(glfwGetTime()) + 1.0f) / 2.0f) * (90.0f - 10.0f);
+            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            shader.SetMat4("model", model);
+
+            // Малюємо куб з 36 індексів (GL_TRIANGLES)
+            glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        }
+
+        vao.Unbind();
         glfwSwapBuffers(window);
+        float EndOfFrameTime = glfwGetTime();
     }
 
-    // ----------------------------
-    // Cleanup and Memory Reporting
-    // ----------------------------
     glfwTerminate();
-
-    std::cout << "Total allocated memory: " << memInfo.totalAllocated << " bytes" << std::endl;
-    std::cout << "Total freed memory: " << memInfo.totalFreed << " bytes" << std::endl;
-    std::cout << "Used memory: " << memInfo.getUsedMemory() << " bytes" << std::endl;
-    std::cout << "Memory allocation count: " << memInfo.allocationCount << std::endl;
-    std::cout << "Memory deallocation count: " << memInfo.deallocationCount << std::endl;
-
     return 0;
 }

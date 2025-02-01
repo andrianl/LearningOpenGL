@@ -15,19 +15,26 @@ workspace (path.getbasename(os.getcwd())) -- Get the current working directory a
     end
     
     toolset "clang"  -- Встановлюємо Clang як інструментарій 
-    
+   
+    defines { "GLEW_STATIC", "GLM_FORCE_INTRINSICS", "GLM_FORCE_SWIZZLE"} -- Preprocessor definitions for all projects
+
     require("premake-vscode")
 
     location (projectFilesDir)
     startproject "Application" -- Set the default startup project
-    defines { "GLEW_STATIC" } -- Preprocessor definitions for all projects
 
+       -- Додаємо опції компіляції для підтримки SSE
+    filter { "toolset:msc*" } -- Для компілятора MSVC
+        buildoptions { "/arch:SSE2" }
+        
+    filter { "system:linux", "toolset:gcc or clang" }
+        buildoptions { "-msse2" } -- Для GCC або Clang
 
     filter { "toolset:clang" }
         defines { "CLANG" }
+        buildoptions { "-msse2" } -- Для GCC або Clang
 
     filter { "platforms:Win32" }
-        system "Windows"
         architecture "x86"
 
     filter { "platforms:Win64" }
@@ -60,6 +67,9 @@ workspace (path.getbasename(os.getcwd())) -- Get the current working directory a
         defines { "RELEASE" }
         symbols "Off"
         optimize "Full"
+
+    defines { "GLEW_STATIC", "GLM_FORCE_INTRINSICS", "GLM_FORCE_SWIZZLE"} -- Preprocessor definitions for all projects
+
 
 -- Project configuration for GLFW
 project "GLFW"
