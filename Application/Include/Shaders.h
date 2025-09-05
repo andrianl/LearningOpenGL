@@ -1,193 +1,192 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <string>
 #include <string_view>
 #include "glm/glm.hpp"
 
 /**
- * @brief Struct to hold the vertex and pixel shader source code.
+ * @brief Enumeration of supported shader stages.
+ *
+ * This enum lists all shader types recognized by the engine.
+ * Only the first set (up to Pixel) is supported by OpenGL in this implementation.
  */
-struct ShaderSourceProgram
+enum class ShaderType : int8_t
 {
-    std::string VertexShader;  ///< Vertex shader source code.
-    std::string PixelShader;   ///< Pixel (fragment) shader source code.
+    None,       ///< No shader type selected
+    Compute,    ///< Compute shader
+    Vertex,     ///< Vertex shader
+    Hull,       ///< Tessellation Control shader
+    Domain,     ///< Tessellation Evaluation shader
+    Geometry,   ///< Geometry shader
+    Pixel,      ///< Fragment (Pixel) shader
+
+    /* Shader types below are not supported by OpenGL in this implementation */
+
+    Amplification,
+    Mesh,
+    AllGraphics,
+
+    RayGeneration,
+    AnyHit,
+    ClosestHit,
+    Miss,
+    Intersection,
+    Callable,
+    AllRayTracing,
+
+    All
 };
 
 /**
- * @brief The Shader class encapsulates an OpenGL shader program.
+ * @brief Holds source code for all supported OpenGL shader stages.
  *
- * This class provides functionality for loading, compiling, and linking shaders,
- * as well as setting uniform variables in the shader program.
+ * Each string contains the GLSL source code for the corresponding shader stage.
+ * Empty strings indicate that the stage is not used in the current shader program.
+ */
+struct ShaderSourceProgram
+{
+    std::string ComputeShader;   ///< GLSL source for compute shader
+    std::string VertexShader;    ///< GLSL source for vertex shader
+    std::string HullShader;      ///< GLSL source for tessellation control shader
+    std::string DomainShader;    ///< GLSL source for tessellation evaluation shader
+    std::string GeometryShader;  ///< GLSL source for geometry shader
+    std::string PixelShader;     ///< GLSL source for fragment (pixel) shader
+};
+
+/**
+ * @brief Encapsulates an OpenGL shader program.
+ *
+ * The Shader class provides functionality for:
+ * - Loading shader source code from a file
+ * - Parsing and separating multiple shader stages from a single file
+ * - Compiling and linking shader stages into a program
+ * - Binding the program for rendering
+ * - Setting uniform variables in the shader
  */
 class Shader
 {
 public:
     /**
      * @brief Default constructor.
-     *        Useful for creating an uninitialized Shader object.
+     *
+     * Creates an uninitialized Shader object with no program loaded.
      */
     Shader() = default;
 
     /**
-     * @brief Constructs a Shader object by loading and compiling shaders from a file.
-     * @param filepath The path to the file containing both vertex and pixel shader source code.
+     * @brief Constructs a Shader by loading and compiling shaders from a file.
+     *
+     * The file may contain multiple shader stages separated by `#shader <type>` markers.
+     *
+     * @param filepath Path to the shader source file.
      */
     explicit Shader(std::string_view filepath);
 
     /**
-     * @brief Destructor that cleans up OpenGL shader resources.
+     * @brief Destructor.
+     *
+     * Deletes the OpenGL shader program when the Shader object is destroyed.
      */
     ~Shader();
 
-    /**
-     * @brief Copy constructor (default).
-     */
+    /// Copy constructor (default)
     Shader(const Shader&) = default;
 
-    /**
-     * @brief Copy assignment operator (default).
-     */
+    /// Copy assignment operator (default)
     Shader& operator=(const Shader&) = default;
 
     /**
-     * @brief Activates the shader program for OpenGL rendering.
+     * @brief Activates this shader program for rendering.
      *
-     * This method binds the shader program, making it the current shader program used for rendering.
+     * Calls glUseProgram with this shader's program ID.
      */
     void Bind() const;
 
     /**
-     * @brief Retrieves the OpenGL shader program ID.
-     * @return The unique identifier of the shader program.
+     * @brief Returns the OpenGL program ID for this shader.
+     * @return GLuint representing the compiled and linked shader program.
      */
     inline const GLuint GetShaderID() const { return ShaderID; }
 
     // ------------------------------------------------------------------------
-    // Uniform Setter Functions (Pascal Case)
+    // Uniform Setter Functions
     // ------------------------------------------------------------------------
+
     /**
      * @brief Retrieves the location of a uniform variable in the shader program.
      *
-     * This method queries OpenGL for the location of the specified uniform variable within the shader program.
-     *
-     * @param name The name of the uniform variable.
-     * @return The location of the uniform variable as an GLint. Returns -1 if the uniform is not found.
+     * @param name Name of the uniform variable.
+     * @return GLint location of the uniform, or -1 if not found.
      */
     GLint GetUniformLocation(std::string_view name) const;
 
-    /**
-     * @brief Sets a boolean uniform variable in the shader.
-     * @param name The name of the uniform variable.
-     * @param value The boolean value to set.
-     */
+    /// Sets a boolean uniform variable.
     void SetBool(std::string_view name, bool value) const;
 
-    /**
-     * @brief Sets an integer uniform variable in the shader.
-     * @param name The name of the uniform variable.
-     * @param value The integer value to set.
-     */
+    /// Sets an integer uniform variable.
     void SetInt(std::string_view name, int value) const;
 
-    /**
-     * @brief Sets a float uniform variable in the shader.
-     * @param name The name of the uniform variable.
-     * @param value The float value to set.
-     */
+    /// Sets a float uniform variable.
     void SetFloat(std::string_view name, float value) const;
 
-    /**
-     * @brief Sets a vec2 uniform variable in the shader.
-     * @param name The name of the uniform variable.
-     * @param value The glm::vec2 value to set.
-     */
+    /// Sets a vec2 uniform variable from a glm::vec2.
     void SetVec2(std::string_view name, const glm::vec2& value) const;
 
-    /**
-     * @brief Sets a vec2 uniform variable in the shader using individual components.
-     * @param name The name of the uniform variable.
-     * @param x The x-component of the vector.
-     * @param y The y-component of the vector.
-     */
+    /// Sets a vec2 uniform variable from two floats.
     void SetVec2(std::string_view name, float x, float y) const;
 
-    /**
-     * @brief Sets a vec3 uniform variable in the shader.
-     * @param name The name of the uniform variable.
-     * @param value The glm::vec3 value to set.
-     */
+    /// Sets a vec3 uniform variable from a glm::vec3.
     void SetVec3(std::string_view name, const glm::vec3& value) const;
 
-    /**
-     * @brief Sets a vec3 uniform variable in the shader using individual components.
-     * @param name The name of the uniform variable.
-     * @param x The x-component of the vector.
-     * @param y The y-component of the vector.
-     * @param z The z-component of the vector.
-     */
+    /// Sets a vec3 uniform variable from three floats.
     void SetVec3(std::string_view name, float x, float y, float z) const;
 
-    /**
-     * @brief Sets a vec4 uniform variable in the shader.
-     * @param name The name of the uniform variable.
-     * @param value The glm::vec4 value to set.
-     */
+    /// Sets a vec4 uniform variable from a glm::vec4.
     void SetVec4(std::string_view name, const glm::vec4& value) const;
 
-    /**
-     * @brief Sets a vec4 uniform variable in the shader using individual components.
-     * @param name The name of the uniform variable.
-     * @param x The x-component of the vector.
-     * @param y The y-component of the vector.
-     * @param z The z-component of the vector.
-     * @param w The w-component of the vector.
-     */
+    /// Sets a vec4 uniform variable from four floats.
     void SetVec4(std::string_view name, float x, float y, float z, float w) const;
 
-    /**
-     * @brief Sets a mat2 uniform variable in the shader.
-     * @param name The name of the uniform variable.
-     * @param mat The glm::mat2 matrix to set.
-     */
+    /// Sets a mat2 uniform variable.
     void SetMat2(std::string_view name, const glm::mat2& mat) const;
 
-    /**
-     * @brief Sets a mat3 uniform variable in the shader.
-     * @param name The name of the uniform variable.
-     * @param mat The glm::mat3 matrix to set.
-     */
+    /// Sets a mat3 uniform variable.
     void SetMat3(std::string_view name, const glm::mat3& mat) const;
 
-    /**
-     * @brief Sets a mat4 uniform variable in the shader.
-     * @param name The name of the uniform variable.
-     * @param mat The glm::mat4 matrix to set.
-     */
+    /// Sets a mat4 uniform variable.
     void SetMat4(std::string_view name, const glm::mat4& mat) const;
 
 private:
     /**
-     * @brief Parses the shader source file and separates vertex and pixel shader code.
-     * @param filepath The path to the shader source file.
-     * @return A ShaderSourceProgram struct containing both vertex and pixel shader code.
+     * @brief Parses a shader source file into separate shader stage strings.
+     *
+     * The file should contain sections marked with `#shader <type>` where `<type>` is
+     * one of: compute, vertex, hull, domain, geometry, pixel/fragment.
+     *
+     * @param filepath Path to the shader source file.
+     * @return ShaderSourceProgram struct containing the separated source code.
      */
     ShaderSourceProgram ParseShader(const std::string& filepath);
 
     /**
-     * @brief Creates and links a shader program using vertex and pixel shader source code.
-     * @param VertexShader The vertex shader source code.
-     * @param PixelShader The pixel (fragment) shader source code.
-     * @return The unique ID of the created shader program.
+     * @brief Creates and links an OpenGL shader program from provided source code.
+     *
+     * Only non-empty shader stage strings will be compiled and attached.
+     *
+     * @param Source Struct containing GLSL source for each shader stage.
+     * @return GLuint ID of the created shader program.
      */
-    GLuint CreateShader(const std::string& VertexShader, const std::string& PixelShader);
+    GLuint CreateShader(const ShaderSourceProgram& Source);
 
     /**
-     * @brief Compiles a shader from source code.
-     * @param Source The source code of the shader.
-     * @param Type The type of shader (GL_VERTEX_SHADER or GL_FRAGMENT_SHADER).
-     * @return The unique ID of the compiled shader.
+     * @brief Compiles a single shader stage from source code.
+     *
+     * @param Source GLSL source code for the shader.
+     * @param Type OpenGL shader type enum (e.g., GL_VERTEX_SHADER).
+     * @return GLuint ID of the compiled shader object, or 0 on failure.
      */
     GLuint CompileShader(const std::string& Source, GLuint Type);
 
-    GLuint ShaderID = 0;  ///< OpenGL ID for the shader program.
+    GLuint ShaderID = 0; ///< OpenGL program object ID for this shader.
 };
