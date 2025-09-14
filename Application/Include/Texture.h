@@ -2,8 +2,9 @@
 #include <GL/glew.h>
 #include <string>
 #include "stb_image.h"
+#include <Platform.h>
 
-class Shader;
+class GraphicsShader;
 
 class Texture
 {
@@ -24,6 +25,10 @@ public:
     // This method binds the texture, making it the current active texture used for rendering.
     void Bind() const;
 
+	// Bind the texture to a specific slot
+    // This method binds the texture, making it the current active texture used for rendering.
+    void Bind(const uint8 Slot) const;
+
     // Unbind the texture
     // This method unbinds the texture, making it inactive.
     void Unbind() const;
@@ -39,39 +44,62 @@ public:
 * @param shader The shader program in which the uniform will be updated.
 * @param uniformName The name of the sampler uniform in the shader.
 */
-    void BindTextureToShader(GLuint unit, const Shader& shader, std::string_view uniformName) const;
+    void BindTextureToShader(GLuint unit, const GraphicsShader& shader, std::string_view uniformName) const;
 
     // Getter for texture ID
     // This inline method returns the OpenGL ID of the texture.
     //
     // Returns:
     // - The unique ID of the texture as a GLuint.
-    inline const GLuint GetTextureID() const { return TextureID; }
+    inline const GLuint GetTextureID() const { return Data.ImageData.TextureID; }
 
     // Getter for width
     // This inline method returns the width of the texture in pixels.
     //
     // Returns:
     // - The width of the texture as an integer.
-    inline const int GetWidth() const { return width; }
+	inline const uint16 GetWidth() const
+	{
+		return Data.ImageData.Packed & 0x3FFF; // 14 біт
+	}
+
 
     // Getter for height
     // This inline method returns the height of the texture in pixels.
     //
     // Returns:
     // - The height of the texture as an integer.
-    inline const int GetHeight() const { return height; }
+	inline const uint16_t GetHeight() const
+	{
+		return (Data.ImageData.Packed >> 14) & 0x3FFF;
+	}
+
+
 
     // Getter for number of channels
     // This inline method returns the number of color channels in the texture.
     //
     // Returns:
     // - The number of color channels as an integer.
-    inline const int GetChannelsNumber() const { return nrChannels; }
+	inline const uint8 GetChannels() const
+	{
+		return (Data.ImageData.Packed >> 28) & 0xF; // останні 4 біти
+	}
+
 
 private:
-    GLuint TextureID;               // OpenGL ID for the texture
-    int width, height, nrChannels;  // Width, height, and number of channels of the texture
+	union ImageInfo
+	{
+		uint64_t Raw;
+
+		struct Image
+		{
+			GLuint TextureID;
+			uint32 Packed : 32; // width + height + channels
+		} ImageData;
+	};
+
+    ImageInfo Data;
 
     // Function to load image using your preferred image loading library (e.g., stb_image)
     // This private method loads an image from the specified file path using stb_image or another image loading library.
@@ -92,4 +120,19 @@ private:
     // Parameters:
     // - data: Pointer to the image data to be freed.
     void FreeImage(unsigned char* data);
+
+	inline void SetWidth(uint16 InWidth)
+	{
+        Data.ImageData.Packed = (Data.ImageData.Packed & ~0x3FFF) | (InWidth & 0x3FFF);
+	}
+
+	inline void SetHeight(uint16 InHeight)
+	{
+        Data.ImageData.Packed = (Data.ImageData.Packed & ~(0x3FFF << 14)) | ((InHeight & 0x3FFF) << 14);
+	}
+
+	inline void SetChannels(uint8 InChannels)
+	{
+        Data.ImageData.Packed = (Data.ImageData.Packed & ~(0xF << 28)) | ((InChannels & 0xF) << 28);
+	}
 };

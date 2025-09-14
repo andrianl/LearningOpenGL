@@ -1,7 +1,13 @@
 #pragma once
-
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <array>
+#include <string>
+#include <unordered_map>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/constants.hpp>
+#include <random>
+#include <cmath>
 
 enum class CoordinateSystem
 {
@@ -11,8 +17,8 @@ enum class CoordinateSystem
     YZX,  // Forward: Y, Right: Z, Up: X
     ZXY,  // Forward: Z, Right: X, Up: Y
     ZYX   // Forward: Z, Right: Y, Up: X
-    // Додайте інші системи координат, якщо потрібно
 };
 
-glm::mat4 GetTransformationMatrix(CoordinateSystem from, CoordinateSystem to);
-glm::vec3 ConvertCoordinateSystem(const glm::vec3& vec, CoordinateSystem from, CoordinateSystem to);
+float randomFloat01();
+
+glm::vec3 randomNormalizedVec3();

@@ -1,4 +1,5 @@
 #include "Window.h"
+#include <Camera.h>
 
 void OpenGLVersionInit(int Major, int Minor) 
 {

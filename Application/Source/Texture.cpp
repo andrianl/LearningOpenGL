@@ -6,8 +6,8 @@
 
 Texture::Texture(const std::string& path)
 {
-    glGenTextures(1, &TextureID);
-    glBindTexture(GL_TEXTURE_2D, TextureID);
+    glGenTextures(1, &Data.ImageData.TextureID);
+    glBindTexture(GL_TEXTURE_2D, Data.ImageData.TextureID);
 
     // Set texture wrapping and filtering options
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -16,13 +16,21 @@ Texture::Texture(const std::string& path)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     stbi_set_flip_vertically_on_load(true);
+
     // Load image
+
+	int width, height, nrChannels;
     unsigned char* data = LoadImage(path, &width, &height, &nrChannels);
     if (data)
     {
         GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
+
+        SetWidth(width);
+        SetWidth(height);
+        SetChannels(nrChannels);
+
         std::cout << "Texture loaded: " << path << std::endl;
     }
     else
@@ -36,12 +44,18 @@ Texture::Texture(const std::string& path)
 
 Texture::~Texture()
 {
-    glDeleteTextures(1, &TextureID);
+    glDeleteTextures(1, &Data.ImageData.TextureID);
 }
 
 void Texture::Bind() const
 {
-    glBindTexture(GL_TEXTURE_2D, TextureID);
+    glBindTexture(GL_TEXTURE_2D, Data.ImageData.TextureID);
+}
+
+void Texture::Bind(const uint8 Slot) const
+{
+    glActiveTexture(GL_TEXTURE0 + Slot);
+	glBindTexture(GL_TEXTURE_2D, Data.ImageData.TextureID);
 }
 
 void Texture::Unbind() const
@@ -51,22 +65,15 @@ void Texture::Unbind() const
 
 unsigned char* Texture::LoadImage(const std::string& path, int* width, int* height, int* nrChannels)
 {
-    // Use your preferred image loading library here
-    // For example, stb_image.h
-    // unsigned char* data = stbi_load(path.c_str(), width, height, nrChannels, 0);
-    // return data;
     return stbi_load(path.c_str(), width, height, nrChannels, 0);
 }
 
 void Texture::FreeImage(unsigned char* data)
 {
-    // Use your preferred image loading library here
-    // For example, stb_image.h
-    // stbi_image_free(data);
     stbi_image_free(data);
 }
 
-void Texture::BindTextureToShader(GLuint unit, const Shader& shader, std::string_view uniformName) const
+void Texture::BindTextureToShader(GLuint unit, const GraphicsShader& shader, std::string_view uniformName) const
 {
     // Отримуємо максимальну кількість текстурних блоків.
     static GLint maxTextureUnits = 0;

@@ -3,190 +3,420 @@
 #include <GL/glew.h>
 #include <string>
 #include <string_view>
+#include <array>
+#include <concepts>
+#include <span>
 #include "glm/glm.hpp"
 
-/**
- * @brief Enumeration of supported shader stages.
- *
- * This enum lists all shader types recognized by the engine.
- * Only the first set (up to Pixel) is supported by OpenGL in this implementation.
- */
-enum class ShaderType : int8_t
-{
-    None,       ///< No shader type selected
-    Compute,    ///< Compute shader
-    Vertex,     ///< Vertex shader
-    Hull,       ///< Tessellation Control shader
-    Domain,     ///< Tessellation Evaluation shader
-    Geometry,   ///< Geometry shader
-    Pixel,      ///< Fragment (Pixel) shader
-
-    /* Shader types below are not supported by OpenGL in this implementation */
-
-    Amplification,
-    Mesh,
-    AllGraphics,
-
-    RayGeneration,
-    AnyHit,
-    ClosestHit,
-    Miss,
-    Intersection,
-    Callable,
-    AllRayTracing,
-
-    All
-};
+#if __has_include(<flat_map>)
+#include <flat_map>
+template<typename K, typename V>
+using fast_map = std::flat_map<K, V>;
+#else
+#include <unordered_map>
+template<typename K, typename V>
+using fast_map = std::unordered_map<K, V>;
+#endif
 
 /**
- * @brief Holds source code for all supported OpenGL shader stages.
+ * @brief Base functionality for all shader types.
  *
- * Each string contains the GLSL source code for the corresponding shader stage.
- * Empty strings indicate that the stage is not used in the current shader program.
+ * Non-virtual base class providing common shader operations.
+ * Uses CRTP (Curiously Recurring Template Pattern) for zero-cost abstractions.
  */
-struct ShaderSourceProgram
-{
-    std::string ComputeShader;   ///< GLSL source for compute shader
-    std::string VertexShader;    ///< GLSL source for vertex shader
-    std::string HullShader;      ///< GLSL source for tessellation control shader
-    std::string DomainShader;    ///< GLSL source for tessellation evaluation shader
-    std::string GeometryShader;  ///< GLSL source for geometry shader
-    std::string PixelShader;     ///< GLSL source for fragment (pixel) shader
-};
-
-/**
- * @brief Encapsulates an OpenGL shader program.
- *
- * The Shader class provides functionality for:
- * - Loading shader source code from a file
- * - Parsing and separating multiple shader stages from a single file
- * - Compiling and linking shader stages into a program
- * - Binding the program for rendering
- * - Setting uniform variables in the shader
- */
-class Shader
+template<typename Derived>
+class BaseShader
 {
 public:
     /**
      * @brief Default constructor.
-     *
-     * Creates an uninitialized Shader object with no program loaded.
      */
-    Shader() = default;
+    constexpr BaseShader() = default;
 
     /**
-     * @brief Constructs a Shader by loading and compiling shaders from a file.
-     *
-     * The file may contain multiple shader stages separated by `#shader <type>` markers.
-     *
-     * @param filepath Path to the shader source file.
+     * @brief Destructor - non-virtual for smaller object size.
      */
-    explicit Shader(std::string_view filepath);
+    ~BaseShader() noexcept
+    {
+        if (m_shaderID != 0) [[likely]]
+        {
+            glDeleteProgram(m_shaderID);
+        }
+    }
+
+    // Disable copy constructor and assignment
+    BaseShader(const BaseShader&) = delete;
+    BaseShader& operator=(const BaseShader&) = delete;
+
+    // Enable move semantics
+    constexpr BaseShader(BaseShader&& other) noexcept
+        : m_shaderID(std::exchange(other.m_shaderID, 0))
+        , m_uniformCache(std::move(other.m_uniformCache))
+    {
+    }
+
+    constexpr BaseShader& operator=(BaseShader&& other) noexcept
+    {
+        if (this != &other) [[likely]]
+        {
+            if (m_shaderID != 0)
+            {
+                glDeleteProgram(m_shaderID);
+            }
+
+            m_shaderID = std::exchange(other.m_shaderID, 0);
+            m_uniformCache = std::move(other.m_uniformCache);
+        }
+        return *this;
+    }
 
     /**
-     * @brief Destructor.
-     *
-     * Deletes the OpenGL shader program when the Shader object is destroyed.
+     * @brief Activates this shader program for use.
      */
-    ~Shader();
-
-    /// Copy constructor (default)
-    Shader(const Shader&) = default;
-
-    /// Copy assignment operator (default)
-    Shader& operator=(const Shader&) = default;
+    void Bind() const noexcept
+    {
+        if (m_shaderID != 0) [[likely]]
+        {
+            glUseProgram(m_shaderID);
+        }
+    }
 
     /**
-     * @brief Activates this shader program for rendering.
-     *
-     * Calls glUseProgram with this shader's program ID.
+     * @brief Deactivates the current shader program.
      */
-    void Bind() const;
+    static void Unbind() noexcept
+    {
+        glUseProgram(0);
+    }
 
     /**
-     * @brief Returns the OpenGL program ID for this shader.
-     * @return GLuint representing the compiled and linked shader program.
+     * @brief Returns the OpenGL program ID.
      */
-    inline const GLuint GetShaderID() const { return ShaderID; }
+    [[nodiscard]] constexpr GLuint GetShaderID() const noexcept { return m_shaderID; }
+
+    /**
+     * @brief Checks if the shader is valid.
+     */
+    [[nodiscard]] constexpr bool IsValid() const noexcept { return m_shaderID != 0; }
 
     // ------------------------------------------------------------------------
-    // Uniform Setter Functions
+    // Uniform Setter Functions with optional caching
     // ------------------------------------------------------------------------
 
     /**
-     * @brief Retrieves the location of a uniform variable in the shader program.
-     *
-     * @param name Name of the uniform variable.
-     * @return GLint location of the uniform, or -1 if not found.
+     * @brief Gets uniform location with caching.
      */
-    GLint GetUniformLocation(std::string_view name) const;
+	[[nodiscard]] GLint GetUniformLocation(std::string_view& name) const {
+		if constexpr (Derived::ENABLE_UNIFORM_CACHING) {
+			if (auto it = m_uniformCache.find(name); it != m_uniformCache.end()) [[likely]]
+				return it->second;
 
-    /// Sets a boolean uniform variable.
-    void SetBool(std::string_view name, bool value) const;
+			GLint location = glGetUniformLocation(m_shaderID, name.data());
+			m_uniformCache.emplace(std::string(name), location);
+			return location;
+		}
+		else {
+			return glGetUniformLocation(m_shaderID, name.data());
+		}
+	}
 
-    /// Sets an integer uniform variable.
-    void SetInt(std::string_view name, int value) const;
+    void SetBool(std::string_view name, bool value) const noexcept
+    {
+        glUniform1i(GetUniformLocation(name), static_cast<int>(value));
+    }
 
-    /// Sets a float uniform variable.
-    void SetFloat(std::string_view name, float value) const;
+    void SetInt(std::string_view name, int value) const noexcept
+    {
+        glUniform1i(GetUniformLocation(name), value);
+    }
 
-    /// Sets a vec2 uniform variable from a glm::vec2.
-    void SetVec2(std::string_view name, const glm::vec2& value) const;
+    void SetFloat(std::string_view name, float value) const noexcept
+    {
+        glUniform1f(GetUniformLocation(name), value);
+    }
 
-    /// Sets a vec2 uniform variable from two floats.
-    void SetVec2(std::string_view name, float x, float y) const;
+    void SetVec2(std::string_view name, const glm::vec2& value) const noexcept
+    {
+        glUniform2fv(GetUniformLocation(name), 1, &value[0]);
+    }
 
-    /// Sets a vec3 uniform variable from a glm::vec3.
-    void SetVec3(std::string_view name, const glm::vec3& value) const;
+    void SetVec2(std::string_view name, float x, float y) const noexcept
+    {
+        glUniform2f(GetUniformLocation(name), x, y);
+    }
 
-    /// Sets a vec3 uniform variable from three floats.
-    void SetVec3(std::string_view name, float x, float y, float z) const;
+    void SetVec3(std::string_view name, const glm::vec3& value) const noexcept
+    {
+        glUniform3fv(GetUniformLocation(name), 1, &value[0]);
+    }
 
-    /// Sets a vec4 uniform variable from a glm::vec4.
-    void SetVec4(std::string_view name, const glm::vec4& value) const;
+    void SetVec3(std::string_view name, float x, float y, float z) const noexcept
+    {
+        glUniform3f(GetUniformLocation(name), x, y, z);
+    }
 
-    /// Sets a vec4 uniform variable from four floats.
-    void SetVec4(std::string_view name, float x, float y, float z, float w) const;
+    void SetVec4(std::string_view name, const glm::vec4& value) const noexcept
+    {
+        glUniform4fv(GetUniformLocation(name), 1, &value[0]);
+    }
 
-    /// Sets a mat2 uniform variable.
-    void SetMat2(std::string_view name, const glm::mat2& mat) const;
+    void SetVec4(std::string_view name, float x, float y, float z, float w) const noexcept
+    {
+        glUniform4f(GetUniformLocation(name), x, y, z, w);
+    }
 
-    /// Sets a mat3 uniform variable.
-    void SetMat3(std::string_view name, const glm::mat3& mat) const;
+    void SetMat2(std::string_view name, const glm::mat2& mat) const noexcept
+    {
+        glUniformMatrix2fv(GetUniformLocation(name), 1, GL_FALSE, &mat[0][0]);
+    }
 
-    /// Sets a mat4 uniform variable.
-    void SetMat4(std::string_view name, const glm::mat4& mat) const;
+    void SetMat3(std::string_view name, const glm::mat3& mat) const noexcept
+    {
+        glUniformMatrix3fv(GetUniformLocation(name), 1, GL_FALSE, &mat[0][0]);
+    }
+
+    void SetMat4(std::string_view name, const glm::mat4& mat) const noexcept
+    {
+        glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, &mat[0][0]);
+    }
+
+protected:
+    /**
+     * @brief Compiles a shader stage from source.
+     */
+    [[nodiscard]] static GLuint CompileShader(std::string_view source, GLuint type) noexcept;
+
+    /**
+     * @brief Links compiled shaders into a program.
+     */
+    [[nodiscard]] static GLuint LinkProgram(std::span<const GLuint> shaders) noexcept;
+
+    GLuint m_shaderID = 0;
 
 private:
-    /**
-     * @brief Parses a shader source file into separate shader stage strings.
-     *
-     * The file should contain sections marked with `#shader <type>` where `<type>` is
-     * one of: compute, vertex, hull, domain, geometry, pixel/fragment.
-     *
-     * @param filepath Path to the shader source file.
-     * @return ShaderSourceProgram struct containing the separated source code.
-     */
-    ShaderSourceProgram ParseShader(const std::string& filepath);
+
+#if __has_include(<flat_map>)
+#else
+	struct StringHash {
+		using is_transparent = void;
+		size_t operator()(std::string_view sv) const noexcept {
+			return std::hash<std::string_view>{}(sv);
+		}
+	};
+
+	struct StringEqual {
+		using is_transparent = void;
+		bool operator()(std::string_view a, std::string_view b) const noexcept {
+			return a == b;
+		}
+	};
+#endif
+
+    mutable fast_map<std::string_view, GLint> m_uniformCache;
+};
+
+// ------------------------------------------------------------------------
+// Graphics Shader Class
+// ------------------------------------------------------------------------
+
+/**
+ * @brief Graphics pipeline shader program.
+ */
+class GraphicsShader : public BaseShader<GraphicsShader>
+{
+public:
+    static constexpr bool ENABLE_UNIFORM_CACHING = true;
+
+    constexpr GraphicsShader() = default;
 
     /**
-     * @brief Creates and links an OpenGL shader program from provided source code.
-     *
-     * Only non-empty shader stage strings will be compiled and attached.
-     *
-     * @param Source Struct containing GLSL source for each shader stage.
-     * @return GLuint ID of the created shader program.
+     * @brief Constructs from a file.
      */
-    GLuint CreateShader(const ShaderSourceProgram& Source);
+    explicit GraphicsShader(std::string_view filepath);
 
     /**
-     * @brief Compiles a single shader stage from source code.
-     *
-     * @param Source GLSL source code for the shader.
-     * @param Type OpenGL shader type enum (e.g., GL_VERTEX_SHADER).
-     * @return GLuint ID of the compiled shader object, or 0 on failure.
+     * @brief Constructs from shader sources.
      */
-    GLuint CompileShader(const std::string& Source, GLuint Type);
+    GraphicsShader(std::string_view vertexSource,
+        std::string_view fragmentSource,
+        std::string_view geometrySource = {},
+        std::string_view tessControlSource = {},
+        std::string_view tessEvalSource = {});
 
-    GLuint ShaderID = 0; ///< OpenGL program object ID for this shader.
+private:
+    struct ShaderSources
+    {
+        std::string vertex;
+        std::string geometry;
+        std::string tessControl;
+        std::string tessEval;
+        std::string fragment;
+    };
+
+    [[nodiscard]] static ShaderSources ParseShaderFile(std::string_view filepath);
+    [[nodiscard]] GLuint CreateProgram(const ShaderSources& sources) noexcept;
+};
+
+// ------------------------------------------------------------------------
+// Compute Shader Class
+// ------------------------------------------------------------------------
+
+/**
+ * @brief Compute shader program.
+ */
+class ComputeShader : public BaseShader<ComputeShader>
+{
+public:
+    static constexpr bool ENABLE_UNIFORM_CACHING = false; // Compute shaders typically set uniforms less frequently
+
+    constexpr ComputeShader() = default;
+
+    /**
+     * @brief Constructs from a file.
+     */
+    explicit ComputeShader(std::string_view filepath);
+
+    /**
+     * @brief Constructs from source.
+     */
+    //explicit ComputeShader(std::string_view computeSource);
+
+    /**
+     * @brief Dispatches compute work.
+     */
+    void Dispatch(GLuint numGroupsX, GLuint numGroupsY = 1, GLuint numGroupsZ = 1) const noexcept
+    {
+        if (m_shaderID != 0) [[likely]]
+        {
+            Bind();
+            glDispatchCompute(numGroupsX, numGroupsY, numGroupsZ);
+        }
+    }
+
+    /**
+     * @brief Dispatches with memory barrier.
+     */
+    void DispatchWithBarrier(GLuint numGroupsX, GLuint numGroupsY = 1, GLuint numGroupsZ = 1,
+        GLbitfield barriers = GL_SHADER_STORAGE_BARRIER_BIT) const noexcept
+    {
+        Dispatch(numGroupsX, numGroupsY, numGroupsZ);
+        glMemoryBarrier(barriers);
+    }
+
+    /**
+     * @brief Gets work group size.
+     */
+    [[nodiscard]] glm::uvec3 GetWorkGroupSize() const noexcept;
+
+private:
+    [[nodiscard]] static std::string ParseComputeShader(std::string_view filepath);
+    [[nodiscard]] GLuint CreateProgram(std::string_view computeSource) noexcept;
+};
+
+// ------------------------------------------------------------------------
+// Ray Tracing Shader Class
+// ------------------------------------------------------------------------
+
+/**
+ * @brief Ray tracing shader program.
+ */
+class RayTracingShader : public BaseShader<RayTracingShader>
+{
+public:
+    static constexpr bool ENABLE_UNIFORM_CACHING = true;
+
+    enum class RTShaderType : std::uint8_t
+    {
+        RayGeneration,
+        ClosestHit,
+        AnyHit,
+        Miss,
+        Intersection,
+        Callable
+    };
+
+    constexpr RayTracingShader() = default;
+
+    explicit RayTracingShader(std::string_view filepath);
+
+    void TraceRays(GLuint width, GLuint height, GLuint depth = 1) const noexcept;
+
+private:
+    struct RTShaderSources
+    {
+        std::string rayGen;
+        std::string closestHit;
+        std::string anyHit;
+        std::string miss;
+        std::string intersection;
+        std::string callable;
+    };
+
+    [[nodiscard]] static RTShaderSources ParseRTShaders(std::string_view filepath);
+    [[nodiscard]] GLuint CreateProgram(const RTShaderSources& sources) noexcept;
+};
+
+// ------------------------------------------------------------------------
+// Concept for shader types
+// ------------------------------------------------------------------------
+
+template<typename T>
+concept ShaderType = requires(T shader, std::string_view name, float value) {
+    shader.Bind();
+    shader.Unbind();
+    shader.IsValid();
+    shader.GetShaderID();
+    shader.SetFloat(name, value);
+    T::ENABLE_UNIFORM_CACHING;
+};
+
+// ------------------------------------------------------------------------
+// Legacy wrapper (simplified, no polymorphism)
+// ------------------------------------------------------------------------
+/**
+ * @brief Legacy shader wrapper.
+ * @deprecated Use specific shader types instead.
+ */
+class [[deprecated("Use GraphicsShader, ComputeShader, or RayTracingShader instead")]] Shader
+{
+public:
+    enum class Type : std::uint8_t { Graphics, Compute, RayTracing };
+
+    constexpr Shader() = default;
+    explicit Shader(std::string_view filepath);
+
+    void Bind() const noexcept;
+    static void Unbind() noexcept;
+    [[nodiscard]] GLuint GetShaderID() const noexcept;
+    [[nodiscard]] bool IsValid() const noexcept;
+    [[nodiscard]] constexpr Type GetType() const noexcept { return m_type; }
+
+    // Uniform setters
+    void SetBool(std::string_view name, bool value) const noexcept;
+    void SetInt(std::string_view name, int value) const noexcept;
+    void SetFloat(std::string_view name, float value) const noexcept;
+    void SetVec2(std::string_view name, const glm::vec2& value) const noexcept;
+    void SetVec3(std::string_view name, const glm::vec3& value) const noexcept;
+    void SetVec4(std::string_view name, const glm::vec4& value) const noexcept;
+    void SetMat4(std::string_view name, const glm::mat4& mat) const noexcept;
+
+    // Type-specific operations
+    void Dispatch(GLuint x, GLuint y = 1, GLuint z = 1) const noexcept;
+    void TraceRays(GLuint width, GLuint height, GLuint depth = 1) const noexcept;
+
+private:
+    Type m_type = Type::Graphics;
+
+    // Union to avoid dynamic allocation
+    union ShaderStorage
+    {
+        constexpr ShaderStorage() : graphics{} {}
+        ~ShaderStorage() {} // Handled by Shader destructor
+
+        GraphicsShader graphics;
+        ComputeShader compute;
+        RayTracingShader rayTracing;
+    } m_shader;
+
+    void DestroyShader() noexcept;
 };

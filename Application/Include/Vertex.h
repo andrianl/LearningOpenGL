@@ -45,7 +45,7 @@ struct VertexAttrib
     GLint size;            // Number of components (e.g., 2 for vec2, 3 for vec3)
     GLenum type;           // Data type (e.g., GL_FLOAT, GL_INT, etc.)
     GLsizei stride;        // Total size of the vertex (size of the entire vertex)
-    size_t offset;         // Offset of this attribute within the structure
+    GLsizei offset;         // Offset of this attribute within the structure
     GLboolean normalized;  // Whether the attribute should be normalized
 };
 

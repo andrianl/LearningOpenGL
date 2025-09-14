@@ -1,146 +1,288 @@
-#include "Camera.h"
-#include <glm/gtc/constants.hpp>  // для константи PI
+﻿#include "Camera.h"
+#include "glm/ext/scalar_constants.hpp"
 
-// Повний конструктор з усіма параметрами
-Camera::Camera(glm::vec3 position, glm::vec3 target, float aspectRatio, float nearPlane, float farPlane, float focalLength, float aperture)
-    : position(position), target(target), aspectRatio(aspectRatio), nearPlane(nearPlane), farPlane(farPlane), focalLength(focalLength),
-      aperture(aperture)
+// Default camera values
+const float YAW = -90.0f;
+const float PITCH = 0.0f;
+const float SPEED = 2.5f;
+const float SENSITIVITY = 0.1f;
+const float ZOOM = 45.0f;
+
+// Real camera constants
+const float CIRCLE_OF_CONFUSION = 0.03f; // mm for 35mm format
+
+Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
+	: front(glm::vec3(0.0f, 0.0f, -1.0f)),
+	movementSpeed(SPEED),
+	mouseSensitivity(SENSITIVITY),
+	constrainPitch(true),
+	firstMouse(true),
+	lastX(0.0f),
+	lastY(0.0f)
 {
-    UpdateFOV();
-    UpdateViewMatrix();
-    UpdateProjectionMatrix();
+	this->position = position;
+	this->worldUp = up;
+	this->yaw = yaw;
+	this->pitch = pitch;
+
+	// Default real camera settings (similar to Canon 5D Mark IV)
+	this->aperture = 5.6f;          // f/5.6
+	this->focalLength = 50.0f;      // 50mm lens
+	this->iso = 100;                // ISO 100
+	this->shutterSpeed = 1.0f / 125.0f; // 1/125 second
+	this->sensorSize = glm::vec2(36.0f, 24.0f); // Full frame sensor
+	this->focusDistance = 10.0f;    // 10 meters
+	this->cameraMode = Mode::MANUAL;
+	this->autoFocus = false;
+
+	updateCameraVectors();
+	updateFOV();
+	updateExposureValue();
 }
 
-// Конструктор без діафрагми (апертура)
-Camera::Camera(glm::vec3 position, glm::vec3 target, float aspectRatio, float nearPlane, float farPlane, float focalLength)
-    : position(position), target(target), aspectRatio(aspectRatio), nearPlane(nearPlane), farPlane(farPlane), focalLength(focalLength),
-      aperture(2.8f)  // Значення апертури за замовчуванням
+void Camera::updateCameraVectors()
 {
-    UpdateFOV();
-    UpdateViewMatrix();
-    UpdateProjectionMatrix();
+	// Calculate the new front vector
+	glm::vec3 newFront;
+	newFront.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	newFront.y = sin(glm::radians(pitch));
+	newFront.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front = glm::normalize(newFront);
+
+	// Re-calculate the right and up vector
+	right = glm::normalize(glm::cross(front, worldUp));
+	up = glm::normalize(glm::cross(right, front));
 }
 
-// Конструктор без фокусної відстані і діафрагми
-Camera::Camera(glm::vec3 position, glm::vec3 target, float aspectRatio, float nearPlane, float farPlane)
-    : position(position), target(target), aspectRatio(aspectRatio), nearPlane(nearPlane), farPlane(farPlane), focalLength(50.0f),
-      aperture(2.8f)  // Значення фокусної відстані та апертури за замовчуванням
+void Camera::updateFOV()
 {
-    UpdateFOV();
-    UpdateViewMatrix();
-    UpdateProjectionMatrix();
+	// Calculate FOV based on focal length and sensor size
+	// FOV = 2 * atan(sensor_size / (2 * focal_length))
+
+	float sensorDiagonal = glm::sqrt(sensorSize.x * sensorSize.x + sensorSize.y * sensorSize.y);
+	fov = 2.0f * atan(sensorSize.y / (2.0f * focalLength)) * 180.0f / glm::pi<float>();
 }
 
-// Конструктор тільки з позицією, ціллю і аспектним співвідношенням
-Camera::Camera(glm::vec3 position, glm::vec3 target, float aspectRatio)
-    : position(position), target(target), aspectRatio(aspectRatio), nearPlane(0.1f), farPlane(100.0f), focalLength(50.0f),
-      aperture(2.8f)  // Значення за замовчуванням для інших параметрів
+void Camera::updateExposureValue()
 {
-    UpdateFOV();
-    UpdateViewMatrix();
-    UpdateProjectionMatrix();
+	// EV = log2(aperture^2 / shutter_speed) at ISO 100
+	// Adjust for different ISO: EV_adjusted = EV + log2(ISO/100)
+	float baseEV = log2f((aperture * aperture) / shutterSpeed);
+	exposureValue = baseEV + log2f(iso / 100.0f);
 }
 
-// Конструктор за замовчуванням
-Camera::Camera()
-    : position(glm::vec3(0.0f, 0.0f, 5.0f)), target(glm::vec3(0.0f, 0.0f, 0.0f)), aspectRatio(16.0f / 9.0f), nearPlane(0.1f),
-      farPlane(100.0f), focalLength(50.0f), aperture(2.8f)
+glm::mat4 Camera::getViewMatrix() const
 {
-    UpdateFOV();
-    UpdateViewMatrix();
-    UpdateProjectionMatrix();
+	return glm::lookAt(position, position + front, up);
 }
 
-// Інші методи залишаються без змін
-
-void Camera::SetPosition(const glm::vec3& position)
+glm::mat4 Camera::getProjectionMatrix(float screenWidth, float screenHeight,
+	float nearPlane, float farPlane) const
 {
-    this->position = position;
-    UpdateViewMatrix();
+	float aspectRatio = screenWidth / screenHeight;
+	return glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
 }
 
-void Camera::SetTarget(const glm::vec3& target)
+void Camera::processMovement(const glm::vec3& movementVector, float deltaTime)
 {
-    this->target = target;
-    UpdateViewMatrix();
+	if (glm::length(movementVector) > 0.0f)
+	{
+		glm::vec3 normalizedMovement = glm::normalize(movementVector);
+		float velocity = movementSpeed * deltaTime;
+
+		position += (normalizedMovement.x * right +
+			normalizedMovement.y * up +
+			normalizedMovement.z * front) * velocity;
+	}
 }
 
-void Camera::SetAspectRatio(float aspectRatio)
+void Camera::processMouseMovement(float xpos, float ypos)
 {
-    this->aspectRatio = aspectRatio;
-    UpdateProjectionMatrix();
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to top
+	lastX = xpos;
+	lastY = ypos;
+
+	xoffset *= mouseSensitivity;
+	yoffset *= mouseSensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	// Constrain pitch to prevent screen flipping
+	if (constrainPitch)
+	{
+		if (pitch > 89.0f)
+			pitch = 89.0f;
+		if (pitch < -89.0f)
+			pitch = -89.0f;
+	}
+
+	updateCameraVectors();
 }
 
-void Camera::SetNearPlane(float nearPlane)
+void Camera::processMouseScroll(float yoffset)
 {
-    this->nearPlane = nearPlane;
-    UpdateProjectionMatrix();
+	// Use scroll for changing focal length (zoom)
+	float newFocalLength = focalLength - yoffset * 5.0f;
+	setFocalLength(glm::clamp(newFocalLength, 14.0f, 200.0f));
 }
 
-void Camera::SetFarPlane(float farPlane)
+void Camera::setAperture(float f_stop)
 {
-    this->farPlane = farPlane;
-    UpdateProjectionMatrix();
+	aperture = glm::clamp(f_stop, 1.0f, 22.0f);
+	updateExposureValue();
 }
 
-void Camera::SetFocalLength(float focalLength)
+void Camera::setFocalLength(float mm)
 {
-    this->focalLength = focalLength;
-    UpdateFOV();
-    UpdateProjectionMatrix();
+	focalLength = glm::clamp(mm, 14.0f, 600.0f);
+	updateFOV();
 }
 
-void Camera::SetAperture(float aperture)
+void Camera::setISO(int value)
 {
-    this->aperture = aperture;
-    UpdateFOV();               // Оновлення поля зору (FOV) при зміні діафрагми
-    UpdateProjectionMatrix();  // Оновлення проекційної матриці
+	// Common ISO values: 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800
+	iso = glm::clamp(value, 50, 12800);
+	updateExposureValue();
 }
 
-void Camera::LookAt(const glm::vec3& target)
+void Camera::setShutterSpeed(float seconds)
 {
-    this->target = target;
-    UpdateViewMatrix();
+	shutterSpeed = glm::clamp(seconds, 1.0f / 8000.0f, 30.0f);
+	updateExposureValue();
 }
 
-void Camera::SetFOV(float fov)
+void Camera::setSensorSize(float width, float height)
 {
-    this->fov = fov;
-    UpdateFocalLength();
-    UpdateProjectionMatrix();
+	sensorSize = glm::vec2(width, height);
+	updateFOV();
 }
 
-glm::mat4 Camera::GetViewMatrix() const
+void Camera::setFocusDistance(float distance)
 {
-    return viewMatrix;
+	focusDistance = glm::max(distance, 0.1f);
 }
 
-glm::mat4 Camera::GetProjectionMatrix() const
+void Camera::autoExpose(float targetBrightness)
 {
-    return projectionMatrix;
+	// Simple auto exposure - adjust ISO first, then shutter speed
+	if (cameraMode == Mode::AUTO)
+	{
+		// This is a simplified auto exposure algorithm
+		// In reality, it would be based on light metering
+		float currentEV = exposureValue;
+		float targetEV = log2f(targetBrightness * 100.0f);
+
+		if (currentEV < targetEV - 1.0f)
+		{
+			// Increase exposure: lower f-stop or increase ISO
+			if (iso < 800)
+				setISO(iso * 2);
+			else if (aperture > 2.8f)
+				setAperture(aperture / 1.4f);
+		}
+		else if (currentEV > targetEV + 1.0f)
+		{
+			// Decrease exposure
+			if (aperture < 8.0f)
+				setAperture(aperture * 1.4f);
+			else if (iso > 100)
+				setISO(iso / 2);
+		}
+	}
 }
 
-void Camera::UpdateViewMatrix()
+void Camera::autoFocusOnPoint(glm::vec3 worldPoint)
 {
-    viewMatrix = glm::lookAt(position, target, glm::vec3(0.0f, 1.0f, 0.0f));  // Позиція, ціль, вектор вгору
+	if (autoFocus)
+	{
+		float distance = glm::length(worldPoint - position);
+		setFocusDistance(distance);
+	}
 }
 
-void Camera::UpdateProjectionMatrix()
+void Camera::setPortraitMode()
 {
-    projectionMatrix = glm::perspective(
-        glm::radians(fov), aspectRatio, nearPlane, farPlane);  // Поле зору, аспектне співвідношення, ближня та дальня площини обрізання
+	setFocalLength(85.0f);
+	setAperture(1.8f);
+	setShutterSpeed(1.0f / 125.0f);
+	setISO(200);
 }
 
-void Camera::UpdateFOV()
+void Camera::setLandscapeMode()
 {
-    // Припускаємо, що висота сенсора 24 мм для спрощення
-    float sensorHeight = 24.0f;
-    fov = 2.0f * glm::degrees(glm::atan(sensorHeight / (2.0f * focalLength)));  // В градусах
+	setFocalLength(24.0f);
+	setAperture(8.0f);
+	setShutterSpeed(1.0f / 60.0f);
+	setISO(100);
 }
 
-void Camera::UpdateFocalLength()
+void Camera::setSportsMode()
 {
-    // Припускаємо, що висота сенсора 24 мм для спрощення
-    float sensorHeight = 24.0f;
-    focalLength = sensorHeight / (2.0f * glm::tan(glm::radians(fov) / 2.0f));  // Обчислення фокусної відстані на основі поля зору
+	setFocalLength(200.0f);
+	setAperture(2.8f);
+	setShutterSpeed(1.0f / 500.0f);
+	setISO(400);
+}
+
+void Camera::setNightMode()
+{
+	setFocalLength(50.0f);
+	setAperture(1.4f);
+	setShutterSpeed(1.0f / 30.0f);
+	setISO(1600);
+}
+
+float Camera::getDepthOfField() const
+{
+	// Simplified DOF calculation
+	float hyperfocal = getHyperfocalDistance();
+
+	if (focusDistance >= hyperfocal)
+	{
+		return INFINITY;
+	}
+
+	float nearLimit = (hyperfocal * focusDistance) / (hyperfocal + focusDistance);
+	float farLimit = (hyperfocal * focusDistance) / (hyperfocal - focusDistance);
+
+	return farLimit - nearLimit;
+}
+
+float Camera::getHyperfocalDistance() const
+{
+	// H = f² / (N * c) + f
+	// where f = focal length, N = f-number, c = circle of confusion
+	float f_mm = focalLength;
+	float f_m = f_mm / 1000.0f; // convert to meters
+	float c_m = CIRCLE_OF_CONFUSION / 1000.0f; // convert to meters
+
+	return (f_m * f_m) / (aperture * c_m) + f_m;
+}
+
+glm::vec2 Camera::getDOFRange() const
+{
+	float hyperfocal = getHyperfocalDistance();
+
+	float nearLimit = (hyperfocal * focusDistance) / (hyperfocal + focusDistance);
+	float farLimit;
+
+	if (focusDistance >= hyperfocal)
+	{
+		farLimit = INFINITY;
+	}
+	else
+	{
+		farLimit = (hyperfocal * focusDistance) / (hyperfocal - focusDistance);
+	}
+
+	return {nearLimit, farLimit};
 }
