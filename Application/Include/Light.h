@@ -1,21 +1,23 @@
 #pragma once
 #include "glm/glm.hpp"
 #include <Shaders.h>
+#include <Platform.h>
 
-class Light 
+class Light
 {
-
 public:
-	Light() = delete;
+	//Light() = delete;
 
 	glm::vec3 GetColor() const { return Color; }
 	float GetIntensity() const { return Intensity; }
 
-	inline void SetColor(const glm::vec3& newColor) { Color = newColor; }
-	inline void SetIntensity(float newIntensity) { Intensity = newIntensity; }
+	inline void SetColor(const glm::vec3& NewColor) { Color = NewColor; }
+	inline void SetIntensity(float NewIntensity) { Intensity = NewIntensity; }
 
-private:
-	glm::vec3 Ñolor{ 1.0f }; 
+	/*virtual void Apply(Shader& ShaderProgram) const = 0; */ // Make Light an abstract class if you want to enforce implementation in derived classes
+
+protected:
+	glm::vec3 Color{ 1.0f };
 	float Intensity = 1.0f;
 };
 
@@ -25,12 +27,14 @@ public:
 	DirectionalLight() = default;
 
 	glm::vec3 GetDirection() const { return Direction; }
-	inline void SetDirection(const glm::vec3& newDirection) { Direction = glm::normalize(newDirection); }
+	inline void SetDirection(const glm::vec3& NewDirection) { Direction = glm::normalize(NewDirection); }
 
-	void Apply(Shader& shader) const 
+	void Apply(GraphicsShader* ShaderProgram, int LightIndex) const
 	{
-		shader.SetVec3("DirectionalLight.Direction", Direction);
-		shader.SetVec3("DirectionalLight.Color", GetColor() * GetIntensity());
+		const std::string indexStr = "[" + std::to_string(LightIndex) + "]";
+		ShaderProgram->SetVec3("DirectionalLights" + indexStr + ".Color", GetColor());
+		ShaderProgram->SetFloat("DirectionalLights" + indexStr + ".Intensity", GetIntensity());
+		ShaderProgram->SetVec3("DirectionalLights" + indexStr + ".Direction", Direction);
 	}
 
 private:
@@ -42,31 +46,34 @@ class PointLight : public Light
 public:
 	PointLight() = default;
 
-	glm::vec3 GetPosition() const { return position; }
-	float GetConstant() const { return constant; }
-	float GetLinear() const { return linear; }
-	float GetQuadratic() const { return quadratic; }
+	glm::vec3 GetPosition() const { return Position; }
+	float GetConstant() const { return Constant; }
+	float GetLinear() const { return Linear; }
+	float GetQuadratic() const { return Quadratic; }
 
-	inline void SetPosition(const glm::vec3& newPosition) { position = newPosition; }
-	inline void SetAttenuation(float newConstant, float newLinear, float newQuadratic) {
-		constant = newConstant;
-		linear = newLinear;
-		quadratic = newQuadratic;
+	inline void SetPosition(const glm::vec3& NewPosition) { Position = NewPosition; }
+	inline void SetAttenuation(float NewConstant, float NewLinear, float NewQuadratic) {
+		Constant = NewConstant;
+		Linear = NewLinear;
+		Quadratic = NewQuadratic;
 	}
 
-	void Apply(Shader& shader) const {
-		shader.SetVec3("pointLight.position", position);
-		shader.SetVec3("pointLight.color", GetColor() * GetIntensity());
-		shader.SetFloat("pointLight.constant", constant);
-		shader.SetFloat("pointLight.linear", linear);
-		shader.SetFloat("pointLight.quadratic", quadratic);
+	void Apply(GraphicsShader* ShaderProgram, int LightIndex) const
+	{
+		const std::string indexStr = "[" + std::to_string(LightIndex) + "]";
+		ShaderProgram->SetVec3("PointLights" + indexStr + ".Color", GetColor());
+		ShaderProgram->SetFloat("PointLights" + indexStr + ".Intensity", GetIntensity());
+		ShaderProgram->SetVec3("PointLights" + indexStr + ".Position", Position);
+		ShaderProgram->SetFloat("PointLights" + indexStr + ".Constant", Constant);
+		ShaderProgram->SetFloat("PointLights" + indexStr + ".Linear", Linear);
+		ShaderProgram->SetFloat("PointLights" + indexStr + ".Quadratic", Quadratic);
 	}
 
 private:
-	glm::vec3 position{ 0.0f };
-	float constant = 1.0f;
-	float linear = 0.09f;
-	float quadratic = 0.032f;
+	glm::vec3 Position{ 0.0f };
+	float Constant = 1.0f;
+	float Linear = 0.09f;
+	float Quadratic = 0.032f;
 };
 
 class SpotLight : public PointLight
@@ -74,27 +81,30 @@ class SpotLight : public PointLight
 public:
 	SpotLight() = default;
 
-	glm::vec3 GetDirection() const { return direction; }
-	float GetCutOff() const { return cutOff; }
-	float GetOuterCutOff() const { return outerCutOff; }
+	glm::vec3 GetDirection() const { return Direction; }
+	float GetCutOff() const { return CutOff; }
+	float GetOuterCutOff() const { return OuterCutOff; }
 
-	inline void SetDirection(const glm::vec3& newDirection) { direction = glm::normalize(newDirection); }
-	inline void SetCutOff(float newCutOff) { cutOff = glm::cos(glm::radians(newCutOff)); }
-	inline void SetOuterCutOff(float newOuterCutOff) { outerCutOff = glm::cos(glm::radians(newOuterCutOff)); }
+	inline void SetDirection(const glm::vec3& NewDirection) { Direction = glm::normalize(NewDirection); }
+	inline void SetCutOff(float NewCutOff) { CutOff = glm::cos(glm::radians(NewCutOff)); }
+	inline void SetOuterCutOff(float NewOuterCutOff) { OuterCutOff = glm::cos(glm::radians(NewOuterCutOff)); }
 
-	void Apply(Shader& shader) const {
-		shader.SetVec3("spotLight.position", GetPosition());
-		shader.SetVec3("spotLight.direction", direction);
-		shader.SetVec3("spotLight.color", GetColor() * GetIntensity());
-		shader.SetFloat("spotLight.constant", GetConstant());
-		shader.SetFloat("spotLight.linear", GetLinear());
-		shader.SetFloat("spotLight.quadratic", GetQuadratic());
-		shader.SetFloat("spotLight.cutOff", cutOff);
-		shader.SetFloat("spotLight.outerCutOff", outerCutOff);
+	void Apply(GraphicsShader* ShaderProgram, int LightIndex) const
+	{
+		const std::string indexStr = "[" + std::to_string(LightIndex) + "]";
+		ShaderProgram->SetVec3("SpotLights" + indexStr + ".Color", GetColor());
+		ShaderProgram->SetFloat("SpotLights" + indexStr + ".Intensity", GetIntensity());
+		ShaderProgram->SetVec3("SpotLights" + indexStr + ".Position", GetPosition());
+		ShaderProgram->SetFloat("SpotLights" + indexStr + ".Constant", GetConstant());
+		ShaderProgram->SetFloat("SpotLights" + indexStr + ".Linear", GetLinear());
+		ShaderProgram->SetFloat("SpotLights" + indexStr + ".Quadratic", GetQuadratic());
+		ShaderProgram->SetVec3("SpotLights" + indexStr + ".Direction", Direction);
+		ShaderProgram->SetFloat("SpotLights" + indexStr + ".CutOff", CutOff);
+		ShaderProgram->SetFloat("SpotLights" + indexStr + ".OuterCutOff", OuterCutOff);
 	}
 
 private:
-	glm::vec3 direction{ 0.0f, -1.0f, 0.0f };
-	float cutOff = glm::cos(glm::radians(12.5f));
-	float outerCutOff = glm::cos(glm::radians(17.5f));
+	glm::vec3 Direction{ 0.0f, -1.0f, 0.0f };
+	float CutOff = glm::cos(glm::radians(12.5f));
+	float OuterCutOff = glm::cos(glm::radians(17.5f));
 };
